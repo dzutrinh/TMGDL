@@ -28,3 +28,13 @@ This is a work in progress.
 
 ![](./GAMES/TETRIS/SCREEN02.GIF)
 
+## Work in progress
+
+### Package Manager
+
+![](./WIP/WIP1.png)
+
+### Installer
+
+![](./WIP/WIP2.png)
+
