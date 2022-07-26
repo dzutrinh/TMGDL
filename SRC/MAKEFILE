@@ -1,0 +1,19 @@
+!include "macros"
+
+SOURCE=libtmgd.pas
+
+all: $(source)
+	@$(PC) $(CFLAGS) $(SOURCE)
+
+install:
+	@if exist *.TPU $(MV) *.TPU $(LIBDIR)
+	@if exist *.FPD $(MV) *.FPD $(LIBDIR)
+	@if exist *.O   $(MV) *.O   $(LIBDIR)
+	@if exist *.PPU $(MV) *.PPU $(LIBDIR)
+
+clean:
+	@if exist $(LIBDIR)\*.TPU $(RM) $(LIBDIR)\*.TPU
+	@if exist $(LIBDIR)\*.FPD $(RM) $(LIBDIR)\*.FPD
+	@if exist $(LIBDIR)\*.O   $(RM) $(LIBDIR)\*.O
+	@if exist $(LIBDIR)\*.PPU $(RM) $(LIBDIR)\*.PPU
+

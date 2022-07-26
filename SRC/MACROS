@@ -1,0 +1,42 @@
+#------------------------------------------------------------------------------
+# File utilities
+#------------------------------------------------------------------------------
+RM=rm		# 'erase' or 'del' under DOS
+MD=md		# 'mkdir' under Linux
+CP=cp		# 'copy' under DOS
+MV=mv		# 'move under DOS
+UPX=upx		# optional executable compressor
+
+#------------------------------------------------------------------------------
+# Compilers: 
+# . Turbo Pascal = TPC
+# . TMT Pascal   = TMTPC
+# . Free Pascal  = FPC
+# Please making sure that the above compilers can be found
+# under the 'PATH=' environment variable.
+#------------------------------------------------------------------------------
+TMTROOT=C:\TMT
+TP7ROOT=C:\BP
+FPCROOT=C:\PP
+
+TMTPC=$(TMTROOT)\BIN\tmtpc
+TPC=$(TP7ROOT)\BIN\tpc
+FPC=$(FPCROOT)\BIN\GO32V2\fpc
+
+LIBROOT=\GAMEDEV\TEXTMODE
+LIBDIR=$(LIBROOT)\LIB
+
+# ---- TURBO/BORLAND PASCAL FLAGS -----------
+#CFLAGS=-B
+#LFLAGS=-U.;$(TP7ROOT)\UNITS;$(LIBDIR)
+
+# ---- TMT PASCAL FLAGS ---------------------
+CFLAGS=-C -B
+LFLAGS=-UNIT:.;$(TMTROOT)\UNITS;$(LIBDIR)
+
+# ---- FREE PASCAL FLAGS --------------------
+#CFLAGS=-So -O3
+#LFLAGS=-So -Xs -Op2 -O3 -Fu:$(FPCROOT)\UNITS\;$(LIBDIR);
+
+# select default Pascal compiler
+PC=$(TMTPC)

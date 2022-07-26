@@ -1,0 +1,32 @@
+#
+# Makefile for 'TETRIS' game
+#
+!include "../../src/macros"
+
+PROJECT=TETRIS
+SOURCE=$(PROJECT).pas
+BINARY=$(PROJECT).exe
+INCLUDE=globals.inc \
+	engine.inc \
+	backgd.inc \
+	game.inc
+
+all:	$(BINARY)
+	
+$(BINARY): $(SOURCE) $(INCLUDE)
+	@$(PC) $(LFLAGS) $(SOURCE) -STUB:WSTUB.EXE
+#	@$(UPX) -9 $(BINARY)
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+
+clean:
+	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+
+install:
+	$(MD) ..\..\BIN
+	$(CP) $(BINARY) ..\..\BIN
+	$(CP) $(PROJECT).HLP ..\..\BIN

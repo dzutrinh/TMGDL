@@ -1,0 +1,31 @@
+#
+# Makefile for 'TIC-TAC-TOE' game
+#
+!include "../../src/macros"
+
+PROJECT=T3
+SOURCE=$(PROJECT).pas
+BINARY=$(PROJECT).exe
+INCLUDE=engine.inc \
+	game.inc \
+	globals.inc \
+	backgd.inc
+
+all:	$(BINARY)
+	
+$(BINARY): $(SOURCE) $(INCLUDE)
+	@$(PC) $(LFLAGS) $(SOURCE)
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+
+clean:	
+	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+
+install:
+	$(MD) ..\..\BIN
+	$(CP) $(BINARY) ..\..\BIN
+	$(CP) $(PROJECT).HLP ..\..\BIN

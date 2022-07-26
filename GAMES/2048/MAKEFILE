@@ -1,0 +1,31 @@
+#
+# Makefile for '2048' game
+#
+!include "../../src/macros"
+
+PROJECT=2048
+SOURCE=$(PROJECT).pas
+BINARY=$(PROJECT).exe
+INCLUDE=game.inc \
+	globals.inc \
+	engine.inc \
+	backgd.inc
+
+all:	$(BINARY)
+	
+$(BINARY): $(SOURCE) $(INCLUDE)
+	@$(PC) $(LFLAGS) $(SOURCE)
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+
+clean:	
+	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+
+install:
+	@if not exist ..\..\BIN\NUL $(MD) ..\..\BIN
+	$(CP) $(BINARY) ..\..\BIN
+	$(CP) $(PROJECT).HLP ..\..\BIN

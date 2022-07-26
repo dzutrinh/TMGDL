@@ -1,0 +1,45 @@
+#
+# Makefile for 'GAME OF LIFE' game and its utility
+# 
+!include "../../src/macros"
+
+PROJECT=GOL
+SOURCE=$(PROJECT).pas
+BINARY=$(PROJECT).exe
+UTILITY=PATTERNS
+GENSRC=$(UTILITY).PAS
+GENBIN=$(UTILITY).exe
+INCLUDE=backgd.inc \
+	globals.inc \
+	engine.inc \
+	game.inc \
+	patterns.inc \
+
+all:	$(BINARY)
+	
+$(BINARY): $(SOURCE) $(INCLUDE)
+	@$(PC) $(LFLAGS) $(SOURCE)
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+
+$(GENBIN): $(GENSRC)
+	@$(PC) $(LFLAGS) $(GENSRC)
+	@if exist $(UTILITY).o   $(RM) $(UTILITY).o
+	@if exist $(UTILITY).fpd $(RM) $(UTILITY).fpd
+	@if exist $(UTILITY).sym $(RM) $(UTILITY).sym
+
+clean:	
+	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
+	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
+	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+	@if exist $(UTILITY).exe $(RM) $(UTILITY).exe
+	@if exist $(UTILITY).o   $(RM) $(UTILITY).o
+	@if exist $(UTILITY).fpd $(RM) $(UTILITY).fpd
+	@if exist $(UTILITY).sym $(RM) $(UTILITY).sym
+
+install:
+	$(MD) ..\..\BIN
+	$(CP) $(BINARY) ..\..\BIN
+	$(CP) $(PROJECT).HLP ..\..\BIN\
