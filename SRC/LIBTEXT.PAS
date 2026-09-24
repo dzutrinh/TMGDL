@@ -28,21 +28,22 @@ uses    go32;
 
 { ///////////////////////////// DEFINITIONS //////////////////////////////// }
 
-const	LIBTEXT_VERSION	= $0104;	{ library version }
-        LIBTEXT_BUILD	= '0714';	{ library build   }
+const
+	LIBTEXT_VERSION	= $0104;	{ library version }
+	LIBTEXT_BUILD	= '0714';	{ library build   }
 	LIBTEXT_INIT	: boolean = FALSE;
 
 	SCR_WIDTH	= 80;		{ text-mode screen width }
 	SCR_HEIGHT	= 25;		{ text-mode screen height }
 	SCR_SIZE	= SCR_WIDTH * SCR_HEIGHT * 2;
-        SCR_LINEW	= SCR_WIDTH * 2;{ real width of the screen on memory }
+    SCR_LINEW	= SCR_WIDTH * 2;{ real width of the screen on memory }
 
 	BW80		= 2;		{ black-white }
 	CO80		= 3;		{ text-mode number }
 	MONO		= 7;		{ monochrome }
 
 	MONO_ADAPTER	: boolean = FALSE;
-        VSEG_ADDR       : word = $B800;
+    VSEG_ADDR       : word = $B800;
 
 	CURSOR_OFF	= $2000;	{ turn off cursor }
 	CURSOR_ON	= $0607;	{ restore cursor }
@@ -81,7 +82,7 @@ const	LIBTEXT_VERSION	= $0104;	{ library version }
 	KEY_Y		= $0059;
 	KEY_Z		= $005A;
 	KEY_SLASH	= $002F;
-        KEY_QUESTION	= $003F;
+    KEY_QUESTION	= $003F;
 	KEY_EXCLAIM	= $0021;
 
 	KEY_F1		= $3B00;
@@ -98,7 +99,7 @@ const	LIBTEXT_VERSION	= $0104;	{ library version }
 	KEY_F12		= $8600;
 
 	KEY_SHIFT_TAB	= $0F00;
-        KEY_BACKSPACE	= $0008;
+    KEY_BACKSPACE	= $0008;
 	KEY_TAB		= $0009;
 	KEY_ENTER	= $000D;
 	KEY_SPACE	= $0020;
@@ -109,7 +110,7 @@ const	LIBTEXT_VERSION	= $0104;	{ library version }
 	KEY_ESC		= $001B;
 	KEY_HOME	= $4700;
 	KEY_END		= $4F00;
-        KEY_DELETE	= $5300;
+    KEY_DELETE	= $5300;
 
 	KEY_PGUP	= $4900;
 	KEY_PGDN	= $5100;
@@ -146,10 +147,12 @@ const	LIBTEXT_VERSION	= $0104;	{ library version }
 	KEY_CTRL_Y	= $0019;
 	KEY_CTRL_Z	= $001A;
 
-const	MAX_DLG_LINE	= 22;		{ maximum allowed text lines for }
+const
+	MAX_DLG_LINE	= 22;		{ maximum allowed text lines for }
         				{ displaying in a dialog box     }
 
-type	pword = ^word;  		{ word-based pointer }
+type
+	pword = ^word;  		{ word-based pointer }
 
 	SCREEN	= pchar;		{ for screen memory accessing }
 
@@ -201,32 +204,32 @@ type	pword = ^word;  		{ word-based pointer }
 const	{ use combine with SHADING type }
 	SHADE_BRIGHT	= 1;
 	SHADE_MEDIUM	= 2;
-	SHADE_DARK	= 3;
-        SHADE_TEXT	= 4;
+	SHADE_DARK		= 3;
+    SHADE_TEXT		= 4;
 
 	{ pre-defined monotone color shades }
-	SHADE_MONO	: SHADING = (15,  7,  7, 7);
-	SHADE_BLACK	: SHADING = ( 0,  0,  0, 0);
-	SHADE_RED	: SHADING = (15, 12,  4, 7);
-	SHADE_YELLOW	: SHADING = (15, 14,  6, 7);
-	SHADE_GREEN	: SHADING = (15, 10,  2, 7);
-	SHADE_CYAN	: SHADING = (15, 11,  3, 7);
-	SHADE_BLUE	: SHADING = (15,  9,  1, 7);
-	SHADE_MAGENTA	: SHADING = (15, 13,  5, 7);
-	SHADE_WHITE	: SHADING = (15,  7,  8, 7);
+	SHADE_MONO	 : SHADING = (15,  7,  7, 7);
+	SHADE_BLACK	 : SHADING = ( 0,  0,  0, 0);
+	SHADE_RED	 : SHADING = (15, 12,  4, 7);
+	SHADE_YELLOW : SHADING = (15, 14,  6, 7);
+	SHADE_GREEN	 : SHADING = (15, 10,  2, 7);
+	SHADE_CYAN	 : SHADING = (15, 11,  3, 7);
+	SHADE_BLUE	 : SHADING = (15,  9,  1, 7);
+	SHADE_MAGENTA: SHADING = (15, 13,  5, 7);
+	SHADE_WHITE	 : SHADING = (15,  7,  8, 7);
 
         { pre-defined gradients }
-        SHADE_TRAFFIC	: SHADING = (12, 14, 10, 7);
-        SHADE_INFERNO	: SHADING = (14, 12,  4, 7);
-        SHADE_DAWN	: SHADING = (13,  9,  1, 7);
-        SHADE_OCEAN	: SHADING = (11,  9,  1, 7);
-        SHADE_POISON	: SHADING = (10,  2,  3, 7);
-        SHADE_PLASMA	: SHADING = (15, 11,  9, 7);
-        SHADE_FLARE	: SHADING = (15, 14, 12, 7);
-        SHADE_FOREST	: SHADING = (11, 10,  6, 7);
-        SHADE_BERRY	: SHADING = (15, 12,  9, 7);
-        SHADE_RGB	: SHADING = ( 4,  2,  1, 7);
-        SHADE_CMY	: SHADING = (14, 13, 11, 7);
+        SHADE_TRAFFIC: SHADING = (12, 14, 10, 7);
+        SHADE_INFERNO: SHADING = (14, 12,  4, 7);
+        SHADE_DAWN	 : SHADING = (13,  9,  1, 7);
+        SHADE_OCEAN	 : SHADING = (11,  9,  1, 7);
+        SHADE_POISON : SHADING = (10,  2,  3, 7);
+        SHADE_PLASMA : SHADING = (15, 11,  9, 7);
+        SHADE_FLARE	 : SHADING = (15, 14, 12, 7);
+        SHADE_FOREST : SHADING = (11, 10,  6, 7);
+        SHADE_BERRY	 : SHADING = (15, 12,  9, 7);
+        SHADE_RGB	 : SHADING = ( 4,  2,  1, 7);
+        SHADE_CMY	 : SHADING = (14, 13, 11, 7);
 
         COLOR_NAMES	: array[0..15] of string[11] =
 		('BLACK'   , 'BLUE'       , 'GREEN'    , 'CYAN'    ,
@@ -237,31 +240,34 @@ const	{ use combine with SHADING type }
 	{ frame types }
 	FRAME_SINGLE	: FRAME_SET = #$DA#$C4#$BF#$B3#$C0#$D9;
 	FRAME_DOUBLE	: FRAME_SET = #$C9#$CD#$BB#$BA#$C8#$BC;
-	FRAME_TEXT	: FRAME_SET = '+-+|++';
+	FRAME_TEXT		: FRAME_SET = '+-+|++';
 
 	{ pointer to video RAM, must be filled by ltx_init() }
 	VIDEO_RAM	: SCREEN = nil;
 	CURRENT_SCREEN	: SCREEN = nil;	{ pointer to current screen buffer }
 
-        ENDL		= #10;
+	ENDL		= #10;
 
-type	STR_ATTR	= string[3];	{ for storing attribute sequence }
+type
+	STR_ATTR	= string[3];	{ for storing attribute sequence }
 	STR8		= string[8];
 	STR10		= string[10];
 	STR20		= string[20];
 	STR30		= string[30];
-        STR40		= string[40];
-        STR80		= string[80];
-        STR128		= string[128];
+    STR40		= string[40];
+    STR80		= string[80];
+    STR128		= string[128];
 
 type    CONTROL_STATE	= (CS_NEXT,	{ indicate select next control     }
-			   CS_PREV,	{ indicate select previous control }
+						   CS_PREV,	{ indicate select previous control }
                            CS_DONE,	{ terminate control selection loop }
                            CS_ABORT);	{ abort control selection loop     }
 
-const	MULTI_CONTROLS	: boolean = FALSE;
+const
+	MULTI_CONTROLS	: boolean = FALSE;
 
-var     { BIOS timer ticks for INT 1AH }
+var
+	{ BIOS timer ticks for INT 1AH }
 	ticks		: longint absolute $0040:$006C;
 
 { ///////////////////////////// LOW-LEVEL API ////////////////////////////// }
@@ -275,14 +281,14 @@ procedure	outportw(px: word; v: word);
 
 {$endif}
 
-procedure       ltx_init;
+procedure	ltx_init;
 procedure	ltx_done;
 function	ltx_ready: boolean;
 function	ltx_mono: boolean;
 procedure	ltx_setmode(mode: byte);
 function	ltx_getmode: byte;
 function	ltx_version: string;
-function        ltx_bit: SCREEN;
+function    ltx_bit: SCREEN;
 function	ltx_malloc(size: longint): pointer;
 procedure	ltx_free(var pt);
 function	ltx_memavail: longint;
@@ -328,7 +334,7 @@ procedure	keyboard_speed(speed: word);
 { /////////////////////////// VIRTUAL SCREEN API /////////////////////////// }
 
 function	vscreen_vram: SCREEN;
-function        vscreen_alloc: SCREEN;
+function    vscreen_alloc: SCREEN;
 procedure	vscreen_free(var s: SCREEN);
 function	vscreen_activate(s: SCREEN): SCREEN;
 procedure	vscreen_flip(s: SCREEN);
@@ -608,7 +614,7 @@ begin
         p := pchar(p) - 4;
         move(p^, size, 4);
         freemem(p, size);
-        p := nil;
+		fillchar(pt, sizeof(pointer), 0);
 end;
 
 function	ltx_memavail: longint;
@@ -1654,8 +1660,8 @@ begin
 
 	if ltx_mono then shade := SHADE_MONO;
 	{ framing }
-	printc(l    , t    , shade[SHADE_BRIGHT], 'Ú');
-	printc(l+w-1, t+h-1, shade[SHADE_BRIGHT], 'Ù');
+	printc(l    , t    , shade[SHADE_BRIGHT], #218);
+	printc(l+w-1, t+h-1, shade[SHADE_BRIGHT], #217);
 	for i := 1 to vw do
 	begin
 		printc(l+i       , t    , shade[SHADE_BRIGHT], #196);

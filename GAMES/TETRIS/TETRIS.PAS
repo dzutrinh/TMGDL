@@ -5,7 +5,7 @@
 {   Tetris Game for DOS                                                      }
 {   Version 1.00                                                             }
 {   Coded by Trinh D.D. Nguyen                                               }
-{   Copyrights (c) 2020-2021 by Infinity Group                               }
+{   Copyrights (c) 2020-2026 by Infinity Group                               }
 {                                                                            }
 {   Compilers                                                                }
 {   ---------                                                                }
@@ -24,7 +24,7 @@
 
 {$define RANDOM_ROTATION}	{ randomized piece rotation }
 
-uses	libtmgd, libtext, libctls, libutil;
+uses	libtmgd, libtext, libctls, libutil, libtimer;
 
 {$i backgd.inc}		        { main screen (ANSI-Art)    }
 {$i globals.inc}		{ engine global definitions }

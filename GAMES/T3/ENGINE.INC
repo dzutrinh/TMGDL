@@ -5,9 +5,9 @@
 
 function	boardWidth: longint;                                                            forward;
 function	boardHeight: longint;                                                           forward;
-function        boardGet(const board: GAME_BOARD; c, r: INDEX_TYPE): TILE_TYPE;                 forward;
+function	boardGet(const board: GAME_BOARD; c, r: INDEX_TYPE): TILE_TYPE;                 forward;
 procedure	boardSet(var board: GAME_BOARD; c, r: INDEX_TYPE; v: COLOR_TYPE);               forward;
-function        boardAvail(const board: GAME_BOARD): boolean;                                   forward;
+function	boardAvail(const board: GAME_BOARD): boolean;                                   forward;
 procedure	boardDrawPiece(const board: GAME_BOARD; c, r: INDEX_TYPE);                      forward;
 function	boardFull(const board: GAME_BOARD): boolean;                                    forward;
 procedure	boardDraw(const board: GAME_BOARD);                                             forward;
@@ -20,7 +20,8 @@ procedure	boardInit(var board: GAME_BOARD; x, y: longint);                      
 procedure	aiSetLevel(level: AI_LEVEL);							forward;
 function	aiGetLevel: AI_LEVEL;                                           		forward;
 function	aiEvaluate(const board: GAME_BOARD): integer;                                   forward;
-function	aiMinimax (var board: GAME_BOARD; depth: integer; max: boolean): integer;	forward;
+function	aiAlphaBeta(var board: GAME_BOARD; depth: integer; max: boolean;
+				alpha, beta: integer): integer;	forward;
 procedure	aiBestMove(var board: GAME_BOARD; var bc, br: INDEX_TYPE);				forward;
 
 { ////////////////////////////////////////////////////////////////////////// }
@@ -32,12 +33,12 @@ end;
 
 function	boardWidth: longint;
 begin
-	boardWidth := length(BOARD_FRAME[1]);
+	boardWidth := BOARD_FRAME_WIDTH;
 end;
 
 function	boardHeight: longint;
 begin
-	boardHeight := high(BOARD_FRAME);
+	boardHeight := BOARD_FRAME_HEIGHT;
 end;
 
 function        boardGet(const board: GAME_BOARD; c, r: INDEX_TYPE): TILE_TYPE;
@@ -100,7 +101,7 @@ begin
 
         if active then attr := COLOR_HILITE else attr := CLEAR_COLOR;
         attr := attr shl 4;
-        prints(x, y, attr, 'ßßßßßßß');
+		prints(x, y, attr, #223#223#223#223#223#223#223);
         case board.board[r, c] of
         CROSS:	attr := attr + GAME_CONFIG.clrX;
         NOUGHT:	attr := attr + GAME_CONFIG.clrO;
@@ -136,15 +137,15 @@ begin
 	boardClear(board);
 end;
 
-{ // AI - MINIMAX ////////////////////////////////////////////////////////// }
+{ // AI - ALPHA-BETA /////////////////////////////////////////////////////// }
 
 type	GAME_LEVEL	= array[AI_LEVEL] of byte;
 
-const	AI_DEPTH	: GAME_LEVEL = (5, 1, 0);
+	const	AI_DEPTH	: GAME_LEVEL = (0, 1, 9);
 	AI_DIFFICULTY	: AI_LEVEL = HARD;
 	AI_INFTY 	= 1000;
-	AI_SCORE_CROSS	: integer = +1;
-	AI_SCORE_NOUGHT	: integer = -1;
+	AI_SCORE_CROSS	: integer = +100;
+	AI_SCORE_NOUGHT	: integer = -100;
 	AI_SCORE_TIE	=  0;
 
 procedure	aiSetLevel(level: AI_LEVEL);
@@ -163,105 +164,168 @@ begin
 	aiEvaluate := AI_SCORE_TIE;
 	{$R-}
 	{ scan diagonals }
-	if equals(board.board[1,1], board.board[2,2], board.board[3,3]) then
+	if equals(board.board[1,1], board.board[2,2], board.board[3,3]) and
+	   (board.board[1,1] <> NULL) then
         begin
-		if board.board[1,1] = CROSS then
+		if board.board[1,1] = TILE_TYPE(CROSS) then
 			aiEvaluate := AI_SCORE_CROSS
 		else
-		if board.board[1,1] = NOUGHT then
+		if board.board[1,1] = TILE_TYPE(NOUGHT) then
 			aiEvaluate := AI_SCORE_NOUGHT;
 		exit;
 	end;
 
-	if equals(board.board[1,3], board.board[2,2], board.board[3,1]) then
+	if equals(board.board[1,3], board.board[2,2], board.board[3,1]) and
+	   (board.board[1,3] <> NULL) then
         begin
-		if board.board[1,3] = CROSS then
+		if board.board[1,3] = TILE_TYPE(CROSS) then
 			aiEvaluate := AI_SCORE_CROSS
                 else
-		if board.board[1,3] = NOUGHT then
+		if board.board[1,3] = TILE_TYPE(NOUGHT) then
 			aiEvaluate := AI_SCORE_NOUGHT;
 		exit;
 	end;
 
 	{ scan rows }
 	for r := 1 to BOARD_SIZE do
-	if equals(board.board[r,1], board.board[r,2], board.board[r,3]) then
+	if equals(board.board[r,1], board.board[r,2], board.board[r,3]) and
+	   (board.board[r,1] <> NULL) then
         begin
-		if board.board[r,1] = CROSS then
+		if board.board[r,1] = TILE_TYPE(CROSS) then
 			aiEvaluate := AI_SCORE_CROSS
                 else
-		if board.board[r,1] = NOUGHT then
+		if board.board[r,1] = TILE_TYPE(NOUGHT) then
 			aiEvaluate := AI_SCORE_NOUGHT;
 		exit;
 	end;
 
 	{ scan columns }
 	for c := 1 to BOARD_SIZE do
-	if equals(board.board[1,c], board.board[2,c], board.board[3,c]) then
+	if equals(board.board[1,c], board.board[2,c], board.board[3,c]) and
+	   (board.board[1,c] <> NULL) then
         begin
-		if board.board[1,c] = CROSS then
+		if board.board[1,c] = TILE_TYPE(CROSS) then
 			aiEvaluate := AI_SCORE_CROSS
                 else
-		if board.board[1,c] = NOUGHT then
+		if board.board[1,c] = TILE_TYPE(NOUGHT) then
 			aiEvaluate := AI_SCORE_NOUGHT;
 		exit;
 	end;
 	{$R+}
 end;
 
-{ MINIMAX ALGORITHM }
-function	aiMinimax(var board: GAME_BOARD; depth: integer; max: boolean): integer;
-var	score,
-	best	: integer;
-	c, r	: INDEX_TYPE;
+function	aiHeuristic(const board: GAME_BOARD): integer;
+var	i		: INDEX_TYPE;
+	cross,
+	nought,
+	value		: integer;
+begin
+	{ Open winning lines are a useful deterministic frontier evaluation. }
+	value := 0;
+	for i := 1 to BOARD_SIZE do
+	begin
+		cross := 0; nought := 0;
+		if board.board[i,1] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[i,2] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[i,3] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[i,1] = TILE_TYPE(NOUGHT) then inc(nought);
+		if board.board[i,2] = TILE_TYPE(NOUGHT) then inc(nought);
+		if board.board[i,3] = TILE_TYPE(NOUGHT) then inc(nought);
+		if nought = 0 then inc(value, cross * cross);
+		if cross = 0 then dec(value, nought * nought);
+	end;
+	for i := 1 to BOARD_SIZE do
+	begin
+		cross := 0; nought := 0;
+		if board.board[1,i] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[2,i] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[3,i] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[1,i] = TILE_TYPE(NOUGHT) then inc(nought);
+		if board.board[2,i] = TILE_TYPE(NOUGHT) then inc(nought);
+		if board.board[3,i] = TILE_TYPE(NOUGHT) then inc(nought);
+		if nought = 0 then inc(value, cross * cross);
+		if cross = 0 then dec(value, nought * nought);
+	end;
+	cross := 0; nought := 0;
+	for i := 1 to BOARD_SIZE do
+	begin
+		if board.board[i,i] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[i,i] = TILE_TYPE(NOUGHT) then inc(nought);
+	end;
+	if nought = 0 then inc(value, cross * cross);
+	if cross = 0 then dec(value, nought * nought);
+	cross := 0; nought := 0;
+	for i := 1 to BOARD_SIZE do
+	begin
+		if board.board[i,BOARD_SIZE+1-i] = TILE_TYPE(CROSS) then inc(cross);
+		if board.board[i,BOARD_SIZE+1-i] = TILE_TYPE(NOUGHT) then inc(nought);
+	end;
+	if nought = 0 then inc(value, cross * cross);
+	if cross = 0 then dec(value, nought * nought);
+	aiHeuristic := value;
+end;
+
+{ Alpha-beta search with deterministic depth-limited difficulty. }
+function	aiAlphaBeta(var board: GAME_BOARD; depth: integer; max: boolean;
+				alpha, beta: integer): integer;
+var	score, best, nextAlpha, nextBeta: integer;
+	c, r: INDEX_TYPE;
 begin
 	score := aiEvaluate(board);
-
-	{ if a side has won the game, return the score }
-	if (score <> AI_SCORE_TIE) then
+	if score = AI_SCORE_CROSS then
 	begin
-		aiMinimax := score;
+		aiAlphaBeta := score - depth;
 		exit;
 	end;
-
-	{ if there are no more moves and no winner then it is a tie }
+	if score = AI_SCORE_NOUGHT then
+	begin
+		aiAlphaBeta := score + depth;
+		exit;
+	end;
 	if boardFull(board) then
 	begin
-		aiMinimax := AI_SCORE_TIE;
+		aiAlphaBeta := AI_SCORE_TIE;
+		exit;
+	end;
+	if depth >= AI_DEPTH[AI_DIFFICULTY] then
+	begin
+		aiAlphaBeta := aiHeuristic(board);
 		exit;
 	end;
 
-	if max then			{ AI: maximizer's move }
+	if max then
 	begin
 		best := -AI_INFTY;
-		for r := 1 to BOARD_SIZE do	{ scan all cells }
+		nextAlpha := alpha;
+		for r := 1 to BOARD_SIZE do
 		for c := 1 to BOARD_SIZE do
 			if board.board[r, c] = NULL then
 			begin
 				board.board[r, c] := COMPUTER;
-				score := aiMinimax(board, depth+1, FALSE)+
-					 ltx_randin(-AI_DEPTH[AI_DIFFICULTY],
-					             AI_DEPTH[AI_DIFFICULTY]);
+				score := aiAlphaBeta(board, depth+1, FALSE, nextAlpha, beta);
 				board.board[r, c] := NULL;
 				best := ltx_max(score, best);
+				if best > nextAlpha then nextAlpha := best;
+				if beta <= nextAlpha then break;
 			end;
-		aiMinimax := best;
+		aiAlphaBeta := best;
 	end
-	else				{ HUMAN: minimizer move }
+	else
 	begin
 		best := AI_INFTY;
-		for r := 1 to BOARD_SIZE do	{ scan all cells }
+		nextBeta := beta;
+		for r := 1 to BOARD_SIZE do
 		for c := 1 to BOARD_SIZE do
 			if board.board[r, c] = NULL then
 			begin
 				board.board[r, c] := HUMAN;
-				score := aiMinimax(board, depth+1, TRUE)+
-                                	 ltx_randin(-AI_DEPTH[AI_DIFFICULTY],
-					             AI_DEPTH[AI_DIFFICULTY]);
+				score := aiAlphaBeta(board, depth+1, TRUE, alpha, nextBeta);
 				board.board[r, c] := NULL;
 				best := ltx_min(score, best);
+				if best < nextBeta then nextBeta := best;
+				if nextBeta <= alpha then break;
 			end;
-		aiMinimax := best;
+		aiAlphaBeta := best;
 	end;
 end;
 
@@ -270,6 +334,8 @@ var     score,
 	best	: integer;
 	c, r	: INDEX_TYPE;
 begin
+	bc := 1;
+	br := 1;
 	best	:= -AI_INFTY;
 
 	{ scan all cells, evaluate minimax function for all empty cells }
@@ -280,7 +346,7 @@ begin
 		begin
 			board.board[r, c] := COMPUTER;	{ make the move }
 			{ evaluate the move }
-			score := aiMinimax(board, 0, FALSE);
+			score := aiAlphaBeta(board, 0, FALSE, -AI_INFTY, AI_INFTY);
 			board.board[r, c] := NULL;	{ undo the move }
 			{ if the evaluated value is higher than }
 			{ the best value, then update it        }

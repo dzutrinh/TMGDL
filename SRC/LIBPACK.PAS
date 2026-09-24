@@ -119,6 +119,7 @@ function        package_open(filename: string): PACKAGE;
 var	pkg	: PACKAGE;
 	i	: integer;
 	nr	: word;
+        fsize	: longint;
 begin
 	package_open := nil;
 
@@ -133,8 +134,10 @@ begin
                 exit;
         end;
 
-        blockread(pkg^.handle, pkg^.hdr, sizeof(PKGFILE_HEADER));
-        if pkg^.hdr.magic <> PKGFILE_MAGIC then
+        blockread(pkg^.handle, pkg^.hdr, sizeof(PKGFILE_HEADER), nr);
+        if (nr <> sizeof(PKGFILE_HEADER)) or
+	   (pkg^.hdr.magic <> PKGFILE_MAGIC) or
+	   (pkg^.hdr.count > PKGFILE_MAX) then
         begin
                 close(pkg^.handle);
                 dispose(pkg);
@@ -142,6 +145,13 @@ begin
         end;
 
         pkg^.size := sizeof(PKGFILE_ENTRY) * pkg^.hdr.count;
+        fsize := filesize(pkg^.handle);
+        if pkg^.size > fsize - sizeof(PKGFILE_HEADER) then
+        begin
+                close(pkg^.handle);
+                dispose(pkg);
+                exit;
+        end;
         if ltx_memavail < pkg^.size then
         begin
         	close(pkg^.handle);
@@ -154,6 +164,16 @@ begin
         begin
         	blockread(pkg^.handle, pkg^.list^[i], sizeof(PKGFILE_ENTRY), nr);
                 if nr <> sizeof(PKGFILE_ENTRY) then
+                begin
+                        close(pkg^.handle);
+                        ltx_free(pkg^.list);
+                        dispose(pkg);
+                        exit;
+                end;
+                if (pkg^.list^[i].size < 0) or
+                   (pkg^.list^[i].offset < sizeof(PKGFILE_HEADER) + pkg^.size) or
+                   (pkg^.list^[i].offset > fsize) or
+                   (pkg^.list^[i].size > fsize - pkg^.list^[i].offset) then
                 begin
                         close(pkg^.handle);
                         ltx_free(pkg^.list);
@@ -186,6 +206,7 @@ begin
 	if (pkg = nil) then exit;
         if (pkg^.mode = PFM_OPEN) then exit;
 	if not file_exist(filename) then exit;
+        if length(filename) > 12 then exit;
 
 	if (pkg^.hdr.count < PKGFILE_MAX) then
         begin
@@ -354,6 +375,8 @@ begin
 	package_extract := FALSE;
         if (pkg = nil) or (filename = '') then exit;
         if pkg^.mode = PFM_CREATE then exit;
+	if (pos('\\', filename) <> 0) or (pos('/', filename) <> 0) or
+	   (filename = '.') or (filename = '..') then exit;
 
         idx := package_lookup(pkg, filename);
         if idx = 0 then exit;
@@ -421,6 +444,7 @@ begin
 	package_verify := 0;
         if (pkg = nil) then exit;
         if pkg^.mode = PFM_CREATE then exit;
+	if pkg^.hdr.count = 0 then exit;
 
         sum   := crc32_init;
 	csize := sizeof(PKGFILE_HEADER) +

@@ -1,4 +1,4 @@
 @echo off
-::make clean
+make clean
 make
 make install

@@ -3,7 +3,7 @@
 
 { // GAME HANDLERS ///////////////////////////////////////////////////////// }
 
-procedure       gameInit(major, minor: longint; build: string);			forward;
+procedure   gameInit(major, minor: longint; build: string);			forward;
 procedure	gameShutdown;                                                   forward;
 procedure	gameMenu;                                                       forward;
 procedure	gamePlay;                                                       forward;
@@ -15,7 +15,7 @@ procedure	gameShowVersion;                                                forwar
 procedure	gameBackground;                                                 forward;
 procedure	gameReset;                                                      forward;
 procedure	gameSwitchPlayer;                                               forward;
-function        gameWin(p: COLOR_TYPE): boolean;                           	forward;
+function    gameWin(p: COLOR_TYPE): boolean;                           	forward;
 function	gameState: GAME_STATE;                                          forward;
 function	gameAbort: boolean;                                             forward;
 procedure	gameMoveHuman(c, r: integer);                          		forward;
@@ -38,6 +38,13 @@ begin
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
+	if GAME_CONFIG.mode > PVA then GAME_CONFIG.mode := APP_DEFAULT_CFG.mode;
+	if GAME_CONFIG.level > HARD then GAME_CONFIG.level := APP_DEFAULT_CFG.level;
+	if GAME_CONFIG.clrX > 15 then GAME_CONFIG.clrX := APP_DEFAULT_CFG.clrX;
+	if GAME_CONFIG.clrO > 15 then GAME_CONFIG.clrO := APP_DEFAULT_CFG.clrO;
+	if GAME_CONFIG.clrX = GAME_CONFIG.clrO then
+		GAME_CONFIG.clrO := APP_DEFAULT_CFG.clrO;
+	aiSetLevel(GAME_CONFIG.level);
 
 	GAME_VERSION	:= major shl 8 + minor;
 	GAME_BUILD	:= build;
@@ -107,8 +114,13 @@ procedure	gameHelp;
 var	hb	: PHELPBOX;
 begin
 	hb := helpboxCreate(FILE_HELP, 'HELP', -1, -1);
-        helpboxExec(hb);
-        helpboxDestroy(hb);
+	if hb <> nil then
+	begin
+		helpboxExec(hb);
+		helpboxDestroy(hb);
+	end
+	else
+		info(SHADE_RED, 'CANNOT OPEN HELP FILE.');
 end;
 
 procedure	gameAbout;
@@ -132,8 +144,8 @@ begin
 
 		print(INFO_X+2, INFO_Y+1, '~0BSPACE: ~03PLAY');
 		print(INFO_X+2, INFO_Y+2, '~0A    W: ~02UP');
-		print(INFO_X+2, INFO_Y+3, '~0A    A: ~02DOWN');
-		print(INFO_X+2, INFO_Y+4, '~0A    S: ~02LEFT');
+		print(INFO_X+2, INFO_Y+3, '~0A    A: ~02LEFT');
+		print(INFO_X+2, INFO_Y+4, '~0A    S: ~02DOWN');
 		print(INFO_X+2, INFO_Y+5, '~0A    D: ~02RIGHT');
 		print(INFO_X+2, INFO_Y+6, '~0E    H: ~06HELP');
 		print(INFO_X+2, INFO_Y+7, '~0C  ESC: ~04QUIT');
@@ -242,9 +254,12 @@ end;
 procedure	gameMoveComputer;
 var	c, r	: INDEX_TYPE;
 begin
-	aiBestMove(game.board, c, r);
-	boardPut(game.board, c, r, COMPUTER);
-	gameSwitchPlayer;
+	if boardAvail(game.board) then
+	begin
+		aiBestMove(game.board, c, r);
+		boardPut(game.board, c, r, COMPUTER);
+		gameSwitchPlayer;
+	end;
 end;
 
 procedure	gamePlay;
@@ -285,8 +300,8 @@ begin
 			boardJump(game.board, c, r, FALSE);
 
 			case key of
-                        KEY_QUESTION:	gameAbout;
-                        KEY_H:		gameHelp;
+            KEY_QUESTION:	gameAbout;
+            KEY_H:			gameHelp;
 			KEY_LEFT,
 			KEY_A:	if c > 1 then dec(c) else c := 3;
 			KEY_RIGHT,
@@ -299,8 +314,8 @@ begin
 			KEY_SPACE:
 				if cell = NULL then	{ dont overwrite previous moves }
 				begin
-                                	gameMoveHuman(c, r);
-                                        gameStatus(FALSE);
+                    gameMoveHuman(c, r);
+                    gameStatus(FALSE);
 					boardDraw(game.board);
 					state := gameState;
 					if (state = GAME_PLAYING) then
@@ -309,7 +324,7 @@ begin
 						begin
 							labelSetText(notif, '~03THINKING');
 							gameMoveComputer;
-							vsync_sleep(20);
+							timerDelay(320);
 							boardDraw(game.board);
 							state := gameState;
 						end
@@ -319,7 +334,7 @@ begin
 				else
 				begin
 					labelSetText(notif, '~04INVALID MOVE');
-					vsync_sleep(20);
+					timerDelay(320);
 				end;
 			KEY_ESC:
 				quit := gameAbort;

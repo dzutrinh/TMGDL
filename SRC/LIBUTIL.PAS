@@ -313,26 +313,30 @@ end;
 { return the drive part of a path }
 function	path_drive(dirname: string): string;
 begin
-	if (upcase(dirname[1]) in ['A'..'Z']) and
-           (dirname[2] = ':') then
-        	path_drive := upcase(dirname[1]) + dirname[2]
-        else	path_drive := '';
+	path_drive := '';
+	if length(dirname) >= 2 then
+		if (upcase(dirname[1]) in ['A'..'Z']) and
+		   (dirname[2] = ':') then
+			path_drive := upcase(dirname[1]) + dirname[2];
 end;
 
 { normalize a path string }
 function	path_norm(dirname: string): string;
 begin
-	if dirname[length(dirname)] = '\' then dec(dirname[0]);
+	if length(dirname) > 3 then
+		if dirname[length(dirname)] = '\\' then dec(dirname[0]);
         path_norm := dirname;
 end;
 
 { TRUE if the path is root }
 function	path_root(dirname: string): boolean;
 begin
-	path_root := (dirname[0] = #03) and
-		     ((dirname[1] >= 'A') and (dirname[1] <= 'Z')) and
-		     (dirname[2] = ':') and
-		     (dirname[3] = '\');
+	path_root := FALSE;
+	if length(dirname) = 3 then
+		if (upcase(dirname[1]) in ['A'..'Z']) and
+		   (dirname[2] = ':') and
+		   (dirname[3] = '\\') then
+			path_root := TRUE;
 end;
 
 { fit the path into 'width' characters }
@@ -741,7 +745,7 @@ end;
 function	path_token_push(var stk: PATH_TOKEN_STACK; name: STR_BASENAME): boolean;
 begin
 	path_token_push := FALSE;
-        if stk = nil then exit;
+	if (stk = nil) or (stk^.top >= PATH_TOKEN_MAX) then exit;
         stk^.tokens[stk^.top] := name;
         inc(stk^.top);
         path_token_push := TRUE;
@@ -750,7 +754,7 @@ end;
 function	path_token_pop(var stk: PATH_TOKEN_STACK): STR_BASENAME;
 begin
 	path_token_pop := '';
-	if stk = nil then exit;
+	if (stk = nil) or (stk^.top = 0) then exit;
         dec(stk^.top);
         path_token_pop := stk^.tokens[stk^.top];
 end;
@@ -765,12 +769,14 @@ end;
 
 function	path_token_size(const stk: PATH_TOKEN_STACK): integer;
 begin
-        path_token_size := stk^.top;
+	if stk = nil then path_token_size := 0
+	else path_token_size := stk^.top;
 end;
 
 procedure	path_token_free(var stk: PATH_TOKEN_STACK);
 begin
-        dispose(stk);
+	if stk <> nil then dispose(stk);
+	stk := nil;
 end;
 
 { text file reader }

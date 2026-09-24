@@ -68,6 +68,8 @@ const	CMD_GAME_START	= 1000;
 
 	CELL_WIDTH	= 8;
 	CELL_HEIGHT	= 4;
+	BOARD_FRAME_WIDTH	= 28;
+	BOARD_FRAME_HEIGHT	= 15;
 
         FILE_CONFIG	: string[12] = 'T3.CNF';
         FILE_HELP	: string[12] = 'T3.HLP';
