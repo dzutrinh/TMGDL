@@ -12,6 +12,44 @@
   ~0C         ~0E   ฐ  ~0Aฐ        ~0B   ฐ     ~09 ฐ   ~0D     ฐ
 
 
-WIP 
 
-END OF HELP ----------------------
+~01ออออ~09อออ ~0FINTRODUCTION ~09ออออออออ~01อออออออออออออออออออออ
+
+~0CT~06E~0ET~0AR~0BI~0DS ~07is a tile-matching game created in 1984 by
+Russian software engineer named ~03Alexey Pajitnov.
+
+In ~0CT~06E~0ET~0AR~0BI~0DS~07, players fill lines by moving different
+shaped pieces, which descend onto the playing
+field. The completed lines disappear and grant the
+player points.
+
+The game ends when the playing field is filled.
+The longer the player can delay this inevitable
+outcome, the higher their score will be.
+
+~05ออออ~0Dอออ ~0FTETROMINOS ~0Dออออออออ~05อออออออออออออออออออออออ
+
+
+            ~5Dฑฑ~0F    ~19ฑฑ~0F      ~46ฑฑ~0F  ~6Eฑฑฑฑ~0F  ~2Aฑฑ~0F      ~4Cฑฑ~0F
+  ~3Bฑฑฑฑฑฑฑฑ~0F  ~5Dฑฑฑฑ~0F  ~19ฑฑ~0F      ~46ฑฑ~0F  ~6Eฑฑฑฑ~0F  ~2Aฑฑฑฑ~0F  ~4Cฑฑฑฑ~0F
+            ~5Dฑฑ~0F    ~19ฑฑฑฑ~0F  ~46ฑฑฑฑ~0F          ~2Aฑฑ~0F  ~4Cฑฑ~0F
+
+
+~02ออออ~0Aอออ ~0FCONTROLS ~0Aออออออออ~02อออออออออออออออออออออออออ
+
+There are two keyboard schemes for controlling the
+pieces, which can be customized using the ~04Options~07
+menu. The keys are as follows.
+
+ ~0E* ~0FMove left~08 . . . . . . . . ~0BA~07 or ~0BLeft arrow
+ ~0E* ~0FMove right~08. . . . . . . . ~0BD~07 or ~0BRight arrow
+ ~0E* ~0FMove down~08 . . . . . . . . ~0BS~07 or ~0BDown arrow
+ ~0E* ~0FClockwise spin~08. . . . . . ~09W~07 or ~09Up arrow
+ ~0E* ~0FCounter clockwise spin~08. . ~09Q~07 or ~09/
+ ~0E* ~0FDrop piece~08. . . . . . . . ~0DSPACE~07 or ~0DENTER
+ ~0E* ~0FPause game~08. . . . . . . . ~0DP
+ ~0E* ~0FToggle piece shadow~08 . . . ~0CH
+ ~0E* ~0FToggle color-blind mode~08 . ~0CB
+ ~0E* ~0FQuit game~08 . . . . . . . . ~0CESC
+
+By default, the scheme ~03W~09A~0DD~0CS~07 is used.

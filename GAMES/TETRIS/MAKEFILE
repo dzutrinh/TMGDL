@@ -14,7 +14,7 @@ INCLUDE=globals.inc \
 all:	$(BINARY)
 	
 $(BINARY): $(SOURCE) $(INCLUDE)
-	@$(PC) $(LFLAGS) $(SOURCE) -STUB:WSTUB.EXE
+	@$(PC) $(LFLAGS) $(SOURCE)
 #	@$(UPX) -9 $(BINARY)
 	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
 	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd

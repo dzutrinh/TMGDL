@@ -19,8 +19,8 @@ procedure	gameHelp;                                                             
 
 { ////////////////////////////////////////////////////////////////////////// }
 
-const   FRAME_TIME	= 16;		{ timer tick per frame              }
-	COLLAPSE_TIME	= 30;		{ timer tick per collapse animation }
+const   FRAME_TIME	= 16;		{ milliseconds per frame            }
+	COLLAPSE_TIME	= 30;		{ milliseconds per collapse frame   }
 
 var	board	: BOARD_TYPE;		{ global board game                 }
 	pieces	: PIECE_TYPE;		{ represent current tetromino       }
@@ -42,10 +42,14 @@ begin
 	ltx_init;
 	if ltx_mono then
 		die(-1, 'EGA/VGA adapter is required.');
-	ltx_timer_init;
+	timerInit;
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
+		if (GAME_CONFIG.speed < 1) or (GAME_CONFIG.speed > MAX_LEVELS) then
+			GAME_CONFIG.speed := APP_DEFAULT_CFG.speed;
+		if GAME_CONFIG.height > BOARD_HEIGHT - 2 then
+			GAME_CONFIG.height := APP_DEFAULT_CFG.height;
 
 	GAME_VERSION	:= major shl 8 + minor;
 	GAME_BUILD	:= build;
@@ -93,7 +97,7 @@ begin
 
         config_save(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG));
 
-	ltx_timer_done;
+	timerDone;
 	ltx_done;
 	blink(BLINK_ON);
 
@@ -151,7 +155,7 @@ begin
 		else
 		begin
 			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+1, '~08.     ~0C/: ~04SPIN CW');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+2, '~08.     ~0C'#24': ~04SPIN CW');
+			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+2, '~08.     ~0C'#24': ~04SPIN CCW');
 			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+3, '~07.     ~0E'#27': ~06LEFT');
 			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+4, '~0F.     ~0E'#25': ~06DOWN');
 			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+5, '~0F.     ~0E'#26': ~06RIGHT');
@@ -198,7 +202,7 @@ var	mvCurrent,
 
 	procedure	gameRender;
 	begin
-		sleep(FRAME_TIME);
+		timerDelay(FRAME_TIME);
 		vscreen_flip(vscreen);
 	end;
 
@@ -215,35 +219,56 @@ var	mvCurrent,
 		begin
 			boardCondense(board, marker);
 			gameRender;
-			sleep(COLLAPSE_TIME);	{ wait a little bit }
+			timerDelay(COLLAPSE_TIME);	{ wait a little bit }
+		end;
+	end;
+
+	function	gameTryRotate(clockwise: boolean): boolean;
+	const
+		KICKS: array[1..5] of integer = (0, -1, 1, -2, 2);
+	var
+		i, delta: integer;
+		candidate: MOVE_TYPE;
+	begin
+		gameTryRotate := FALSE;
+		candidate := mvCurrent;
+		if clockwise then inc(candidate.rotate)
+		else dec(candidate.rotate);
+		for i := 1 to 5 do
+		begin
+			delta := KICKS[i];
+			if pieceFit(pieces, board, candidate, cx + delta, cy) then
+			begin
+				mvCurrent := candidate;
+				cx := cx + delta;
+				gameTryRotate := TRUE;
+				exit;
+			end;
 		end;
 	end;
 
 	procedure	gameHandleEvents;
+	var	events: integer;
 	begin
-		if keypressed then
+		events := 0;
+		while keypressed and (events < 4) do
 		begin
+			inc(events);
 			key := getkey;
-			if key = GAME_KEYS[MAPPER_DROP] then dropPiece := TRUE;
+			if key = GAME_KEYS[MAPPER_DROP] then
+			begin
+				dropPiece := TRUE;
+				goDown := TRUE;
+			end;
 			if key = GAME_KEYS[MAPPER_QUIT] then
 				if query(SHADE_RED, '~0CABORT CURRENT GAME (~0FY~0C/~0FN~0C)?') then
 					gameAbort := TRUE;
 			if key = GAME_KEYS[MAPPER_PAUSE] then
 				info(SHADE_YELLOW, '~0EGAME PAUSED. ~0FENTER ~0ETO CONTINUE...');
 			if key = GAME_KEYS[MAPPER_SPIN_CW] then
-			begin
-				mvTry := mvCurrent;
-				inc(mvTry.rotate);
-				if pieceFit(pieces, board, mvTry, cx, cy) then
-					inc(mvCurrent.rotate);
-			end;
+				gameTryRotate(TRUE);
 			if key = GAME_KEYS[MAPPER_SPIN_CCW] then
-			begin
-				mvTry := mvCurrent;
-				inc(mvTry.rotate);
-				if pieceFit(pieces, board, mvTry, cx, cy) then
-					dec(mvCurrent.rotate);
-			end;
+				gameTryRotate(FALSE);
 			if key = GAME_KEYS[MAPPER_DOWN] then
 				if pieceFit(pieces, board, mvCurrent, cx, cy+1) then inc(cy);
 			if key = GAME_KEYS[MAPPER_LEFT] then
@@ -270,6 +295,7 @@ var	mvCurrent,
 	begin
 		if goDown then
 		begin
+			boardShadowClear(board);
 			speedCount := 0;
 			if pieceCount mod 200 = 0 then
 				if (playSpeed >= 20) then dec(playSpeed);
@@ -292,14 +318,16 @@ var	mvCurrent,
 				begin
 					counterAccum(GAME_LINES, markerSize(marker));
 					inc(gameScore, (1 shl markerSize(marker))*10*counterGetValue(GAME_LEVEL));
-					inc(lineCount);
+					inc(lineCount, markerSize(marker));
 
 					if counterGetValue(GAME_LEVEL) < MAX_LEVELS then
-						if lineCount > LEVEL_LINES[counterGetValue(GAME_LEVEL)] then
+						while lineCount >= LEVEL_LINES[counterGetValue(GAME_LEVEL)] do
 						begin
 							dec(lineCount, LEVEL_LINES[counterGetValue(GAME_LEVEL)]);
 							counterIncrease(GAME_LEVEL);
+							if counterGetValue(GAME_LEVEL) = MAX_LEVELS then break;
 						end;
+						playSpeed := LEVEL_SPEED[counterGetValue(GAME_LEVEL)];
 				end;
 
 				cx := (BOARD_WIDTH - pieceWidth(pieces, mvCurrent)) shr 1;
@@ -335,9 +363,9 @@ begin
 
 	while not gameOver and not gameAbort do
 	begin
+		gameHandleEvents;
 		gamePlay;
 		gameDraw;
-		gameHandleEvents;
 		gameRender;
 
 		inc(speedCount);

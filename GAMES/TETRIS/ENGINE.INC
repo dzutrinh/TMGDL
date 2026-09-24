@@ -12,6 +12,7 @@ procedure	boardInit    (var b: BOARD_TYPE; level: byte);							forward;
 procedure	boardDraw    (const b: BOARD_TYPE);								forward;
 procedure	boardClose   (const b: BOARD_TYPE);								forward;
 procedure	boardFill    (var b: BOARD_TYPE; v: integer);							forward;
+procedure	boardShadowClear(var b: BOARD_TYPE);							forward;
 procedure	boardCondense(var b: BOARD_TYPE; var mk: MARKER_TYPE);						forward;
 procedure	boardPieceShadow(var b: BOARD_TYPE; const p: PIECE_TYPE; m: MOVE_TYPE; x, y: integer);		forward;
 
@@ -139,6 +140,17 @@ begin
 	end;
 end;
 
+procedure	boardShadowClear(var b: BOARD_TYPE);
+var	x, y, o	: longint;
+begin
+	for y := 0 to BOARD_HEIGHT-2 do
+	begin
+		o := boardOffset(0, y);
+		for x := 1 to BOARD_WIDTH-2 do
+			if b[o+x] = BOARD_SHADOW then b[o+x] := BOARD_BLANK;
+	end;
+end;
+
 procedure	boardClose(const b: BOARD_TYPE);	{ closing animation }
 var	y	: longint;
 	oldscr	: pchar;
@@ -146,7 +158,7 @@ begin
 	oldscr := vscreen_activate(vscreen_vram);
 	for y := 0 to BOARD_HEIGHT-1 do
 	begin
-		vsync_sleep(2);
+		timerDelay(32);
 		boardRowDraw(b, y);
 	end;
 	vscreen_activate(oldscr);
@@ -164,7 +176,7 @@ var	o, i	: longint;
 begin
 	o := boardOffset(1, y);
 	for i := 0 to BOARD_WIDTH-3 do
-		if b[o+i] = 0 then
+		if (b[o+i] = 0) or (b[o+i] = BOARD_SHADOW) then
 		begin
 			boardRowFull := FALSE;
 			exit;
@@ -200,33 +212,21 @@ begin
 end;
 
 procedure	boardPieceShadow(var b: BOARD_TYPE; const p: PIECE_TYPE; m: MOVE_TYPE; x, y: integer);
-var	i, j, pi: integer;
-	s, e, o,
-	min, max: integer;
+var	i, j, o, shadowY: integer;
 begin
-	min := BOARD_WIDTH-1; max := 0;
+	boardShadowClear(b);
+
+	shadowY := y;
+	while pieceFit(p, b, m, x, shadowY + 1) do inc(shadowY);
+
 	for i := 0 to PIECE_SIZE-1 do
 	for j := 0 to PIECE_SIZE-1 do
 	begin
-		pi := pieceRotate(i, j, m.rotate);
-		if (x + i >= 0) and (x + i < BOARD_WIDTH) then
-		if (y + j >= 0) and (y + j < BOARD_HEIGHT) then
-		begin
-			if (p[m.piece][pi] <> 0) then
-			begin
-				s := x+i;
-				e := s;
-				if min > s then min := s;
-				if max < e then max := e;
-			end;
-		end;
+		if (x + i >= 0) and (x + i < BOARD_WIDTH) and
+		   (shadowY + j >= 0) and (shadowY + j < BOARD_HEIGHT-1) and
+		   (p[m.piece][pieceRotate(i, j, m.rotate)] <> 0) then
+			b[boardOffset(x + i, shadowY + j)] := BOARD_SHADOW;
 	end;
-
-	o := boardOffset(0, BOARD_HEIGHT-1);
-	for i := 1 to BOARD_WIDTH-1 do
-		if (i >= min) and (i <= max) then
-			b[o+i] := BOARD_SHADOW
-		else	b[o+i] := BOARD_BORDER;
 end;
 
 procedure	pieceInit(var p: PIECE_TYPE);
@@ -261,7 +261,8 @@ begin
 		if (x + i >= 0) and (x + i < BOARD_WIDTH) then
 		if (y + j >= 0) and (y + j < BOARD_HEIGHT) then
 		begin
-			if (p[m.piece][pi] <> 0) and (b[fi] <> 0) then
+			if (p[m.piece][pi] <> 0) and
+			   (b[fi] <> 0) and (b[fi] <> BOARD_SHADOW) then
 			begin
 				pieceFit := FALSE;
 				exit;
@@ -308,19 +309,19 @@ end;
 
 function	pieceWidth(const p: PIECE_TYPE; const m: MOVE_TYPE): longint;
 var	i, j,
-	v, mv	: longint;
+	minX, maxX: longint;
 begin
-	mv := 0;
+	minX := PIECE_SIZE;
+	maxX := -1;
 	for j := 0 to PIECE_SIZE-1 do
-	begin
-		v := 0;
 		for i := 0 to PIECE_SIZE-1 do
-		begin
-			if (p[m.piece][pieceRotate(i, j, m.rotate)] <> 0) then inc(v);
-			if mv < v then mv := v;
-		end;
-	end;
-	pieceWidth := mv;
+			if p[m.piece][pieceRotate(i, j, m.rotate)] <> 0 then
+			begin
+				if i < minX then minX := i;
+				if i > maxX then maxX := i;
+			end;
+	if maxX < minX then pieceWidth := 0
+	else pieceWidth := maxX - minX + 1;
 end;
 
 procedure	markerInit(var mk: MARKER_TYPE);

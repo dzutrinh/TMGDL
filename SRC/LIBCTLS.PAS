@@ -911,7 +911,10 @@ end;
 
 procedure	sliderDestroy(var sld: PSLIDER);
 begin
+	if sld = nil then exit;
+	if sld^.scroll <> nil then scrollbarDestroy(sld^.scroll);
 	dispose(sld);
+	sld := nil;
 end;
 
 procedure	sliderDraw(const sld: PSLIDER);
