@@ -4,8 +4,6 @@ unit libtimer;
 
 interface
 
-uses libtext;
-
 const
         LIBTIMER_VERSION = $0100;
         LIBTIMER_BUILD   = '0924';
@@ -16,6 +14,12 @@ function  timerNow: longint;
 procedure timerDelay(milliseconds: longint);
 
 implementation
+
+uses	libtext
+{$ifdef FPC}
+		, go32
+{$endif}
+		;
 
 function timerCounter: word;
 var
