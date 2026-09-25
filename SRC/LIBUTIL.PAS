@@ -120,6 +120,7 @@ function	file_size(filename: string): longint;
 function	file_exist(filename: string): boolean;
 function	file_delete(filename: string): boolean;
 function	file_rename(filename, newname: string): boolean;
+function	file_copy(filename, newname: string): boolean;
 
 function        path_tokenizer(dirname: string): PATH_TOKEN_STACK;
 procedure	path_token_free(var stk: PATH_TOKEN_STACK);
@@ -783,6 +784,55 @@ begin
         rename(f, newname);
         {$I+}
         file_rename := ioresult = 0;
+end;
+
+{ copy a file; newname is overwritten, and removed again on failure }
+function	file_copy(filename, newname: string): boolean;
+var	fi, fo	: FILE;
+	buffer	: array[1..4096] of byte;
+	nr, nw	: word;
+	oldmode	: longint;
+	ok	: boolean;
+begin
+	file_copy := FALSE;
+	if (filename = '') or (newname = '') then exit;
+	if toupper(filename) = toupper(newname) then exit;
+
+	assign(fi, filename);
+	oldmode  := filemode;
+	filemode := 0;
+	{$I-}
+	reset(fi, 1);
+	filemode := oldmode;
+	if ioresult <> 0 then exit;
+	assign(fo, newname);
+	rewrite(fo, 1);
+	if ioresult <> 0 then
+	begin
+		close(fi);
+		if ioresult <> 0 then ;
+		exit;
+	end;
+	repeat
+		blockread(fi, buffer, sizeof(buffer), nr);
+		ok := ioresult = 0;
+		if ok and (nr > 0) then
+		begin
+			blockwrite(fo, buffer, nr, nw);
+			ok := (ioresult = 0) and (nw = nr);
+		end;
+	until not ok or (nr = 0);
+	close(fi);
+	if ioresult <> 0 then ;
+	close(fo);
+	ok := (ioresult = 0) and ok;
+	if not ok then
+	begin
+		erase(fo);
+		if ioresult <> 0 then ;
+	end;
+	{$I+}
+	file_copy := ok;
 end;
 
 { convert a path into tokens, must call path_token_free() after use }
