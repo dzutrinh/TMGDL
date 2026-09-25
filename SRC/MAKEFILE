@@ -2,7 +2,7 @@
 
 SOURCE=libtmgd.pas
 
-all: $(source)
+all: $(SOURCE)
 	@$(PC) $(CFLAGS) $(SOURCE)
 
 install:

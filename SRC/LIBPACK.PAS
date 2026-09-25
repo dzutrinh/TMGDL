@@ -104,14 +104,12 @@ begin
         assign(f, filename);
         {$I-}
         reset(f, 1);
-        {$I-}
-        if ioresult <> 0 then exit;
         {$I+}
+        if ioresult <> 0 then exit;
         blockread(f, sig, sizeof(PKGFILE_SIGNATURE), nr);
         if (nr <> sizeof(PKGFILE_SIGNATURE)) or (sig <> PKGFILE_MAGIC) then
                 package_valid := FALSE
         else	package_valid := TRUE;
-        {$I+}
         close(f);
 end;
 
@@ -375,7 +373,7 @@ begin
 	package_extract := FALSE;
         if (pkg = nil) or (filename = '') then exit;
         if pkg^.mode = PFM_CREATE then exit;
-	if (pos('\\', filename) <> 0) or (pos('/', filename) <> 0) or
+	if (pos('\', filename) <> 0) or (pos('/', filename) <> 0) or
 	   (filename = '.') or (filename = '..') then exit;
 
         idx := package_lookup(pkg, filename);

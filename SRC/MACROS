@@ -36,7 +36,7 @@ LFLAGS=-UNIT:.;$(TMTROOT)\UNITS;$(LIBDIR)
 
 # ---- FREE PASCAL FLAGS --------------------
 #CFLAGS=-So -O3
-#LFLAGS=-So -Xs -Op2 -O3 -Fu:$(FPCROOT)\UNITS\;$(LIBDIR);
+#LFLAGS=-So -Xs -Op2 -O3 -Fu$(FPCROOT)\UNITS\;$(LIBDIR);
 
 # select default Pascal compiler
 PC=$(TMTPC)
