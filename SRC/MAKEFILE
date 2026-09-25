@@ -3,7 +3,7 @@
 SOURCE=libtmgd.pas
 
 all: $(SOURCE)
-	@$(PC) $(CFLAGS) $(SOURCE)
+	@$(PC) $(CFLAGS) $(LFLAGS) $(SOURCE)
 
 install:
 	@if exist *.TPU $(MV) *.TPU $(LIBDIR)

@@ -106,7 +106,7 @@ end;
 function	create: COLONY;
 var	ctx	: COLONY;
 begin
-	if maxavail < sizeof(COLONY_TYPE) then
+	if ltx_maxavail < sizeof(COLONY_TYPE) then
 	begin
 		create := nil;
 		exit;

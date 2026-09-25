@@ -266,9 +266,13 @@ type    CONTROL_STATE	= (CS_NEXT,	{ indicate select next control     }
 const
 	MULTI_CONTROLS	: boolean = FALSE;
 
+{ BIOS timer ticks for INT 1AH }
+{$ifdef	FPC}
+function	ticks: longint;
+{$else}
 var
-	{ BIOS timer ticks for INT 1AH }
 	ticks		: longint absolute $0040:$006C;
+{$endif}
 
 { ///////////////////////////// LOW-LEVEL API ////////////////////////////// }
 
@@ -484,6 +488,14 @@ begin
 	writeln('==========================================');
 end;
 
+{$ifdef FPC}
+{ the go32v2 data segment does not start at 0, go through the DOS selector }
+function	ticks: longint;
+begin
+	ticks := MEML[$0040:$006C];
+end;
+{$endif}
+
 {$ifndef FPC}
 function	inportb(px: word): byte;
 begin
@@ -509,12 +521,14 @@ end;
 var     SCR_SAVE	: record	{ old screen data }
 		data	: array[0..SCR_SIZE-1] of byte;
                 cx, cy	: word;
+                mode	: byte;
 	end;
 
 { initialize the LIBTEXT library - must be called before any other API calls }
 procedure       ltx_init;
 begin
-	MONO_ADAPTER := ltx_getmode = MONO;
+	SCR_SAVE.mode := ltx_getmode;
+	MONO_ADAPTER := SCR_SAVE.mode = MONO;
 	if MONO_ADAPTER then
 	begin
 {$ifdef __TMT__}
@@ -564,7 +578,7 @@ end;
 procedure	ltx_done;
 begin
 	if not LIBTEXT_INIT then exit;
-	ltx_setmode(CO80);
+	if MONO_ADAPTER then ltx_setmode(MONO) else ltx_setmode(CO80);
 
         with SCR_SAVE do
         begin
@@ -601,8 +615,12 @@ function	ltx_malloc(size: longint): pointer;
 var	p	: pointer;
 begin
 	ltx_malloc	:= nil;
+        if size < 0 then exit;
         size	:= size + 4;
-        if ltx_memavail < size then exit;
+{$ifdef VER70}
+        if size > 65528 then exit;	{ getmem takes a word under BP }
+{$endif}
+        if ltx_maxavail < size then exit;
 
 	getmem(p, size);
         move(size, p^, 4);
@@ -870,7 +888,6 @@ var	p	: pword;
         r, o    : integer;
 begin
 	if (w <= 0) or (h <= 0) then exit;
-        CLEAR_COLOR := v shr 12;
 	r := SCR_WIDTH-w;
 {$ifndef FPC}
         p := pword(ltx_bit + ltx_offset(x, y));
@@ -1043,7 +1060,7 @@ function        vscreen_alloc: SCREEN;
 var	scr	: SCREEN;
 begin
         scr := ltx_malloc(SCR_SIZE);
-	fillchar(scr^, SCR_SIZE, 0);
+	if scr <> nil then fillchar(scr^, SCR_SIZE, 0);
 	vscreen_alloc := scr;
 end;
 
@@ -1257,6 +1274,15 @@ begin
 	ltx_fillw(1, 1, SCR_WIDTH, SCR_HEIGHT, ltx_makew(' ', attr));
 end;
 
+{ TRUE if st[i] starts a ~XY colour control sequence }
+function	is_control(const st: string; i: longint): boolean;
+begin
+	is_control := (i + 2 <= length(st)) and
+		      (st[i] = CONTROL_CHAR) and
+		      (st[i+1] in ['0'..'9', 'A'..'F', 'a'..'f']) and
+		      (st[i+2] in ['0'..'9', 'A'..'F', 'a'..'f']);
+end;
+
 { colorful text printing using control sequences ~XY, as follows. }
 { whereas: X = background color                                   }
 {          Y = foreground color                                   }
@@ -1271,9 +1297,7 @@ begin
 	while i <= length(st) do
 	begin
 		v := st[i];
-		if (v = CONTROL_CHAR) and
-		   (st[i+1] in ['0'..'9', 'A'..'F', 'a'..'f']) and
-		   (st[i+2] in ['0'..'9', 'A'..'F', 'a'..'f']) then
+		if is_control(st, i) then
 		begin
 			inc(i); v := upcase(st[i]);
 			case v of
@@ -1349,8 +1373,14 @@ var	i, c, l	: longint;
 begin
 	c := 0;
 	l := length(text);
-	for i := 1 to l do
-		if text[i] = CONTROL_CHAR then inc(c, 3);
+	i := 1;
+	while i <= l do
+		if is_control(text, i) then
+		begin
+			inc(c, 3);
+			inc(i, 3);
+		end
+		else	inc(i);
 	text_length := l-c;
 end;
 
@@ -1429,8 +1459,10 @@ end;
 
 procedure	dialog_destroy(var dlg: PDIALOG);
 begin
+        if dlg = nil then exit;
         if dlg^.show then dialog_hide(dlg);
         dispose(dlg);
+        dlg := nil;
 end;
 
 function	dialog_open(x, y, w, h: integer; shade: SHADING;
@@ -1454,6 +1486,7 @@ function        lpad(text: string; width: longint): string;
 var	tmp	: string;
 	d, l	: longint;
 begin
+	if width > 255 then width := 255;
 	l := length(text);
 	d := abs(l-width);
 	if l < width then
@@ -1471,6 +1504,7 @@ function        rpad(text: string; width: longint): string;
 var	tmp	: string;
 	d, l	: longint;
 begin
+	if width > 255 then width := 255;
 	l := length(text);
 	d := abs(l-width);
 	if l < width then
@@ -1487,6 +1521,8 @@ end;
 function	repl(ch: char; n: longint): string;
 var	st	: string;
 begin
+	if n < 0 then n := 0;
+	if n > 255 then n := 255;
 	fillchar(st[1], n, ch);
 	st[0] := chr(n);
 	repl := st;
@@ -1523,6 +1559,7 @@ var     r	: longint;
         e	: integer;
 begin
 	val(v, r, e);
+	if e <> 0 then r := 0;
         atol := r;
 end;
 
@@ -1798,36 +1835,73 @@ end;
 { dump the region's memory buffer onto disk }
 procedure	region_dump(r: PREGION; filename: string);
 var	f	: FILE;
+	failed	: boolean;
 begin
+	if (r = nil) or (r^.data = nil) then exit;
 	assign(f, filename);
+	{$I-}
 	rewrite(f, 1);
+	if ioresult <> 0 then exit;
 	blockwrite(f, r^.l, sizeof(r^.l));
 	blockwrite(f, r^.t, sizeof(r^.t));
-	blockwrite(f, r^.w, sizeof(r^.h));
+	blockwrite(f, r^.w, sizeof(r^.w));
 	blockwrite(f, r^.h, sizeof(r^.h));
 	blockwrite(f, r^.data^, r^.size);
+	failed := ioresult <> 0;	{ also clears the error so close runs }
 	close(f);
+	if (ioresult <> 0) or failed then
+	begin
+		erase(f);
+		if ioresult <> 0 then ;	{ discard, nothing left to do }
+	end;
+	{$I+}
 end;
 
-{ read up a the region's data to memory buffer  }
+{ read up a the region's data to memory buffer, nil on failure }
 function	region_read(filename: string): PREGION;
 var     r	: PREGION;
 	f	: FILE;
+	ok	: boolean;
+	nr	: word;
 begin
-	new(r);
+	region_read := nil;
 	assign(f, filename);
+	{$I-}
 	reset(f, 1);
+	if ioresult <> 0 then exit;
 
-	blockread(f, r^.l, sizeof(r^.l));
-	blockread(f, r^.t, sizeof(r^.t));
-	blockread(f, r^.w, sizeof(r^.h));
-	blockread(f, r^.h, sizeof(r^.h));
+	new(r);
+	r^.data := nil;
+	ok := TRUE;
+	blockread(f, r^.l, sizeof(r^.l), nr); ok := ok and (nr = sizeof(r^.l));
+	blockread(f, r^.t, sizeof(r^.t), nr); ok := ok and (nr = sizeof(r^.t));
+	blockread(f, r^.w, sizeof(r^.w), nr); ok := ok and (nr = sizeof(r^.w));
+	blockread(f, r^.h, sizeof(r^.h), nr); ok := ok and (nr = sizeof(r^.h));
 
-	r^.size := region_size(r^.w, r^.h);
-        r^.data := ltx_malloc(r^.size);
-	blockread(f, r^.data^, r^.size);
-
+	ok := ok and (r^.l >= 1) and (r^.t >= 1) and (r^.w >= 1) and (r^.h >= 1) and
+	      (r^.l + r^.w - 1 <= SCR_WIDTH) and (r^.t + r^.h - 1 <= SCR_HEIGHT);
+	if ok then
+	begin
+		r^.size := region_size(r^.w, r^.h);
+	        r^.data := ltx_malloc(r^.size);
+	        ok := r^.data <> nil;
+	end;
+	if ok then
+	begin
+		blockread(f, r^.data^, r^.size, nr);
+		ok := nr = r^.size;
+	end;
+	ok := (ioresult = 0) and ok;	{ also clears the error so close runs }
 	close(f);
+	ok := (ioresult = 0) and ok;
+	{$I+}
+
+	if not ok then
+	begin
+		if r^.data <> nil then ltx_free(r^.data);
+		dispose(r);
+		exit;
+	end;
 	region_read := r;
 end;
 
@@ -1859,9 +1933,11 @@ end;
 { free a text-based bit block }
 procedure	block_destroy(var blk: PBLOCK);
 begin
+        if blk = nil then exit;
         if (blk^.size <> 0) and not blk^.attach then
                 ltx_free(blk^.data);
         dispose(blk);
+        blk := nil;
 end;
 
 { blit a text-based bit block to screen at (x, y) using given attr }
@@ -1947,50 +2023,51 @@ end;
 { save a text-based bit block to disk }
 function	block_save(blk: PBLOCK; filename: string): boolean;
 var	f	: FILE;
+	ok	: boolean;
 begin
+        block_save := FALSE;
+        if (blk = nil) or (blk^.data = nil) then exit;
         assign(f, filename);
 	{$I-}
         rewrite(f, 1);
-        {$I+}
-        if ioresult <> 0 then
-        begin
-                block_save := FALSE;
-                exit;
-        end;
+        if ioresult <> 0 then exit;
         blockwrite(f, blk^.w, sizeof(word));
         blockwrite(f, blk^.h, sizeof(word));
         blockwrite(f, blk^.data^, blk^.size);
+        ok := ioresult = 0;	{ also clears the error so close runs }
         close(f);
-        block_save := TRUE;
+        ok := (ioresult = 0) and ok;
+        {$I+}
+        block_save := ok;
 end;
 
 { load a text-based bit block from disk }
 function	block_load(filename: string): PBLOCK;
 var	blk     : PBLOCK;
 	f	: FILE;
-	w, h	: word;
+	w, h,
+	nr	: word;
 begin
+	block_load := nil;
 	assign(f, filename);
         {$I-}
         reset(f, 1);
-        if ioresult <> 0 then
+        if ioresult <> 0 then exit;
+        blk := nil;
+        blockread(f, w, sizeof(word), nr);
+        if nr = sizeof(word) then blockread(f, h, sizeof(word), nr);
+        if (nr = sizeof(word)) and (w > 0) and (h > 0) and
+           (longint(w) * h <= 65528) then
+                blk := block_create(w, h);
+        if blk <> nil then
         begin
-        	block_load := nil;
-                exit;
+                blockread(f, blk^.data^, blk^.size, nr);
+                if nr <> blk^.size then block_destroy(blk);
         end;
-        {$I+}
-        blockread(f, w, sizeof(word));
-        blockread(f, h, sizeof(word));
-        blk := block_create(w, h);
-        if (blk = nil) then
-        begin
-        	dispose(blk);
-	        close(f);
-                block_load := nil;
-                exit;
-        end;
-        blockread(f, blk^.data^, blk^.size);
+        if ioresult <> 0 then block_destroy(blk);
         close(f);
+        if ioresult <> 0 then block_destroy(blk);
+        {$I+}
         block_load := blk;
 end;
 
@@ -2041,37 +2118,52 @@ end;
 { dump the video RAM onto disk }
 function	screen_dump(filename: string): boolean;
 var	f	: FILE;
+	buf	: array[0..SCR_SIZE-1] of byte;
+	nw	: word;
+	ok	: boolean;
 begin
+	screen_dump := FALSE;
+{$ifndef FPC}
+	move(VIDEO_RAM^, buf, SCR_SIZE);
+{$else}
+	dosmemget(VSEG_ADDR, 0, buf, SCR_SIZE);
+{$endif}
 	assign(f, filename);
 	{$I-}
 	rewrite(f, 1);
+	if ioresult <> 0 then exit;
+	blockwrite(f, buf, SCR_SIZE, nw);
+	ok := (ioresult = 0) and (nw = SCR_SIZE);	{ clears the error so close runs }
+	close(f);
+	ok := (ioresult = 0) and ok;
 	{$I+}
-	if ioresult <> 0 then
-		screen_dump := FALSE
-	else
-	begin
-		blockwrite(f, VIDEO_RAM^, SCR_SIZE);
-		close(f);
-		screen_dump := TRUE;
-	end;
+	screen_dump := ok;
 end;
 
 { load the screen-dump file onto video RAM  }
 function	screen_view(filename: string): boolean;
 var	f	: FILE;
+	buf	: array[0..SCR_SIZE-1] of byte;
+	nr	: word;
+	ok	: boolean;
 begin
+	screen_view := FALSE;
 	assign(f, filename);
 	{$I-}
 	reset(f, 1);
+	if ioresult <> 0 then exit;
+	blockread(f, buf, SCR_SIZE, nr);
+	ok := (ioresult = 0) and (nr = SCR_SIZE);
+	close(f);
 	{$I+}
-	if ioresult <> 0 then
-		screen_view := FALSE
-	else
-	begin
-		blockread(f, VIDEO_RAM^, SCR_SIZE);
-		close(f);
-		screen_view := TRUE;
-	end;
+	ok := (ioresult = 0) and ok;
+	if not ok then exit;
+{$ifndef FPC}
+	move(buf, VIDEO_RAM^, SCR_SIZE);
+{$else}
+	dosmemput(VSEG_ADDR, 0, buf, SCR_SIZE);
+{$endif}
+	screen_view := TRUE;
 end;
 
 { display an error message and terminate the application }

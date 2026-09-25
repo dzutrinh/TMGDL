@@ -59,6 +59,7 @@ function        package_extract(var pkg: PACKAGE;
 			        filename, destdir: string): boolean;
 function        package_verify(const pkg: PACKAGE): CRC32_TYPE;
 function	package_checksum(const pkg: PACKAGE): CRC32_TYPE;
+function	package_aborted: boolean;
 
 { package file clean up }
 procedure	package_shutdown(var pkg: PACKAGE);
@@ -77,10 +78,15 @@ const   CALLBACK_FILE	: PKGFILE_CB_FILE = nil;
 
 	PKGFILE_MAGIC	: PKGFILE_SIGNATURE = 'PACK';
 
+	{ set when the user cancelled the last package_pack/package_verify }
+	PKGFILE_ABORTED	: boolean = FALSE;
+
 
 function        package_init: PACKAGE;
 var	pkg	: PACKAGE;
 begin
+	package_init := nil;
+	if ltx_maxavail < sizeof(PKGFILE_TABLE) then exit;
 	new(pkg);
 
         with pkg^ do
@@ -121,6 +127,7 @@ var	pkg	: PACKAGE;
 begin
 	package_open := nil;
 
+	if ltx_maxavail < sizeof(PKGFILE_TABLE) then exit;
 	new(pkg);
 	pkg^.mode := PFM_OPEN;
 	assign(pkg^.handle, filename);
@@ -150,14 +157,13 @@ begin
                 dispose(pkg);
                 exit;
         end;
-        if ltx_memavail < pkg^.size then
+        pkg^.list := ltx_malloc(pkg^.size);
+        if pkg^.list = nil then
         begin
         	close(pkg^.handle);
                 dispose(pkg);
                 exit;
         end;
-
-        pkg^.list := ltx_malloc(pkg^.size);
         for i := 1 to pkg^.hdr.count do
         begin
         	blockread(pkg^.handle, pkg^.list^[i], sizeof(PKGFILE_ENTRY), nr);
@@ -197,31 +203,22 @@ begin
 end;
 
 function	package_add(var pkg: PACKAGE; filename: string): boolean;
-var	f	: FILE;
-	size	: longint;
+var	size	: longint;
 begin
 	package_add := FALSE;
 	if (pkg = nil) then exit;
         if (pkg^.mode = PFM_OPEN) then exit;
-	if not file_exist(filename) then exit;
         if length(filename) > 12 then exit;
+	if (pkg^.hdr.count >= PKGFILE_MAX) then exit;	{ table full }
 
-	if (pkg^.hdr.count < PKGFILE_MAX) then
-        begin
-        	assign(f, filename);
-                {$I-}
-                reset(f, 1);
-                {$I+}
-                if ioresult <> 0 then exit;
-		size := filesize(f);
-                close(f);
+	size := file_size(filename);
+	if size < 0 then exit;
 
-        	inc(pkg^.hdr.count);
-                pkg^.table[pkg^.hdr.count].name := filename;
-                pkg^.table[pkg^.hdr.count].size := size;
-                pkg^.table[pkg^.hdr.count].offset := 0;
-        	package_callback_file(pkg^.table[pkg^.hdr.count]);
-        end;
+	inc(pkg^.hdr.count);
+	pkg^.table[pkg^.hdr.count].name := filename;
+	pkg^.table[pkg^.hdr.count].size := size;
+	pkg^.table[pkg^.hdr.count].offset := 0;
+	package_callback_file(pkg^.table[pkg^.hdr.count]);
 
         package_add := TRUE;
 end;
@@ -337,7 +334,7 @@ begin
         index := 0;
         while (i <= pkg^.hdr.count) and not found do
         begin
-        	if filename = pkg^.list^[i].name then
+        	if toupper(filename) = toupper(pkg^.list^[i].name) then
                 begin
                 	found := TRUE;
                         index := i;
@@ -459,6 +456,7 @@ begin
         until (nr = 0) or abort;
         sum := crc32_final(sum);
 
+        PKGFILE_ABORTED := abort;
         if abort then sum := 0;
 	package_verify := sum;
 end;
@@ -473,7 +471,15 @@ end;
 
 function	package_checksum(const pkg: PACKAGE): CRC32_TYPE;
 begin
+	package_checksum := 0;
+	if pkg = nil then exit;
 	package_checksum := pkg^.hdr.crc32;
+end;
+
+{ TRUE if the last package_pack or package_verify was cancelled with ESC }
+function	package_aborted: boolean;
+begin
+	package_aborted := PKGFILE_ABORTED;
 end;
 
 procedure	package_callback_file(const entry: PKGFILE_ENTRY);
