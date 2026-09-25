@@ -24,7 +24,7 @@
 
 {$define RANDOM_ROTATION}	{ randomized piece rotation }
 
-uses	libtmgd, libtext, libctls, libutil, libtimer;
+uses	libtmgd, libtext, libctls, libutil;
 
 {$i backgd.inc}		        { main screen (ANSI-Art)    }
 {$i globals.inc}		{ engine global definitions }

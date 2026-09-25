@@ -158,7 +158,7 @@ begin
 	oldscr := vscreen_activate(vscreen_vram);
 	for y := 0 to BOARD_HEIGHT-1 do
 	begin
-		timerDelay(32);
+		sleep(32);
 		boardRowDraw(b, y);
 	end;
 	vscreen_activate(oldscr);

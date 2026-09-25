@@ -6,7 +6,7 @@ unit libtmgd;
 
 interface
 
-uses	libtext, libctls, libpack, libutil, libtimer;
+uses	libtext, libctls, libpack, libutil;
 
 const
 {$ifdef __TMT__}
