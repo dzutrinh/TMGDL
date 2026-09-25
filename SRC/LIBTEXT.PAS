@@ -730,9 +730,35 @@ begin
 	ltx_makew := ord(c) or a shl 8;
 end;
 
+{ TRUE if (x, y) lies on the screen }
+function	on_screen(x, y: longint): boolean;
+begin
+	on_screen := (x >= 1) and (x <= SCR_WIDTH) and
+		     (y >= 1) and (y <= SCR_HEIGHT);
+end;
+
+{ clip a rectangle to the screen, FALSE if nothing of it is visible }
+function	clip_rect(var x, y, w, h: integer): boolean;
+begin
+	if x < 1 then
+	begin
+		inc(w, x - 1);
+		x := 1;
+	end;
+	if y < 1 then
+	begin
+		inc(h, y - 1);
+		y := 1;
+	end;
+	if x + w - 1 > SCR_WIDTH  then w := SCR_WIDTH  - x + 1;
+	if y + h - 1 > SCR_HEIGHT then h := SCR_HEIGHT - y + 1;
+	clip_rect := (w > 0) and (h > 0);
+end;
+
 { put a word to a specified coordinate (x, y) in the current buffer }
 procedure	ltx_setw(x, y: word; data: word);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         pword(ltx_bit + ltx_offset(x, y))^ := data;
 {$else}
@@ -745,6 +771,8 @@ end;
 { return a word at the specified coordinate (x, y) in the current buffer }
 function	ltx_getw(x, y: word): word;
 begin
+	ltx_getw := 0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         ltx_getw := pword(ltx_bit + ltx_offset(x, y))^;
 {$else}
@@ -758,6 +786,7 @@ end;
 { modify the attribute at coordinate (x, y) }
 procedure	ltx_seta(x, y: word; a: byte);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y) + 1)^ := chr(a);
 {$else}
@@ -770,6 +799,7 @@ end;
 { modify the character at coordinate (x, y) }
 procedure	ltx_setc(x, y: word; c: char);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y))^ := c;
 {$else}
@@ -782,6 +812,8 @@ end;
 { retrieve the attribute at coordinate (x, y) }
 function	ltx_geta(x, y: word): byte;
 begin
+	ltx_geta := 0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         ltx_geta := byte((ltx_bit + ltx_offset(x, y) + 1)^);
 {$else}
@@ -794,6 +826,8 @@ end;
 { retrieve the character at coordinate (x, y) }
 function	ltx_getc(x, y: word): char;
 begin
+	ltx_getc := #0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	ltx_getc := (ltx_bit + ltx_offset(x, y))^;
 {$else}
@@ -809,7 +843,7 @@ var	p	: pchar;
 	i, j, o : word;
 	v	: char;
 begin
-	if (w <= 0) or (h <= 0) then exit;
+	if not clip_rect(x, y, w, h) then exit;
 	v := char(a);
 {$ifndef FPC}
         p := ltx_bit + ltx_offset(x, y) + 1;
@@ -847,7 +881,7 @@ var	p	: pchar;
 	i, j, o : word;
         v       : byte;
 begin
-	if (w <= 0) or (h <= 0) then exit;
+	if not clip_rect(x, y, w, h) then exit;
 {$ifndef FPC}
 	p := ltx_bit + ltx_offset(x, y);
 	for j := 0 to h - 1 do
@@ -887,7 +921,7 @@ var	p	: pword;
 	i, j,
         r, o    : integer;
 begin
-	if (w <= 0) or (h <= 0) then exit;
+	if not clip_rect(x, y, w, h) then exit;
 	r := SCR_WIDTH-w;
 {$ifndef FPC}
         p := pword(ltx_bit + ltx_offset(x, y));
@@ -957,13 +991,17 @@ begin
 	ltx_centery := (SCR_HEIGHT - h) shr 1 + 1;
 end;
 
-{ ensure a rectangle always inside the visible screen space }
+{ ensure a rectangle always inside the visible screen space, negative }
+{ coordinates mean centered; a rectangle larger than the screen is    }
+{ placed at the top-left corner and clipped when drawn                }
 procedure	ltx_validate_rect(var x, y: integer; w, h: integer);
 begin
 	if (x < 0) then x := ltx_centerx(w);
 	if (y < 0) then y := ltx_centery(h);
-	while (x + w - 1 > SCR_WIDTH) do if (x > 0) then dec(x);
-	while (y + h - 1 > SCR_HEIGHT) do if (y > 0) then dec(y);
+	if (x + w - 1 > SCR_WIDTH) then x := SCR_WIDTH - w + 1;
+	if (y + h - 1 > SCR_HEIGHT) then y := SCR_HEIGHT - h + 1;
+	if (x < 1) then x := 1;
+	if (y < 1) then y := 1;
 end;
 
 { smallest value of a and b }
@@ -1189,22 +1227,30 @@ begin
 	ltx_setw(x, y, ltx_makew(c, attr));
 end;
 
-{ print a text string on screen buffer }
+{ print a text string on screen buffer, clipped to the screen }
 procedure       prints(x, y, attr: longint; text: string);
-var	i	: longint;
+var	i,
+	first,
+	last	: longint;
 {$ifndef FPC}
 	p	: pword;
 {$endif}
 begin
+	if (y < 1) or (y > SCR_HEIGHT) then exit;
+	first := 1;				{ text[i] lands on column x+i-1 }
+	if x < 1 then first := 2 - x;
+	last := length(text);
+	if x + last - 1 > SCR_WIDTH then last := SCR_WIDTH - x + 1;
+	if first > last then exit;
 {$ifndef FPC}
-	p := pword(ltx_bit+ltx_offset(x, y));
-	for i := 1 to length(text) do
+	p := pword(ltx_bit+ltx_offset(x+first-1, y));
+	for i := first to last do
 	begin
 		p^ := ltx_makew(text[i], attr);
 		inc(p);
 	end;
 {$else}
-        for i := 1 to length(text) do
+        for i := first to last do
                 printc(x+i-1, y, attr, text[i]);
 {$endif}
 end;
@@ -1402,7 +1448,9 @@ begin
         dlg^.lines  := 0;
         dlg^.mlen   := 0;
 
-        while (text <> '') and (dlg^.lines < MAX_DLG_LINE) do
+        { a dialog needs 4 extra rows for its frame and margins }
+        while (text <> '') and (dlg^.lines < MAX_DLG_LINE) and
+              (dlg^.lines < SCR_HEIGHT - 4) do
         begin
         	inc(dlg^.lines);
                 dlg^.text[dlg^.lines] := tokenize(text, ENDL);
@@ -1412,6 +1460,8 @@ begin
 
 	if w <= 0 then w := dlg^.mlen + 6  else w := ltx_max(dlg^.mlen + 6, w);
 	if h <= 0 then h := dlg^.lines + 4 else h := ltx_max(dlg^.lines + 4, h);
+	w := ltx_min(w, SCR_WIDTH);
+	h := ltx_min(h, SCR_HEIGHT);
 
         ltx_validate_rect(x, y, w, h);
 
@@ -1763,7 +1813,8 @@ begin
 	region_size := size;
 end;
 
-{ copy a region from video RAM to memory buffer }
+{ copy a region from video RAM to memory buffer, clipped to the screen; }
+{ nil when nothing is visible or memory is short                       }
 function	region_get(l, t, w, h: integer): PREGION;
 var	r	: PREGION;
 {$ifndef FPC}
@@ -1773,10 +1824,19 @@ var	r	: PREGION;
 	w2, i,
 	size	: longint;
 begin
+	region_get := nil;
+	if not clip_rect(l, t, w, h) then exit;
+	if ltx_maxavail < sizeof(TREGION) then exit;
+
 	new(r);
 	size := region_size(w, h);
 	w2   := w shl 1;
         r^.data := ltx_malloc(size);
+        if r^.data = nil then
+        begin
+        	dispose(r);
+        	exit;
+        end;
 
 	r^.l := l;	r^.t := t;
 	r^.w := w;	r^.h := h;
@@ -1788,7 +1848,7 @@ begin
 	for i := t to t+h-1 do
 	begin
 		move(p^, q^, w2);
-		inc(p, 160);
+		inc(p, SCR_LINEW);
 		inc(q, w2);
 	end;
 {$else}
@@ -1803,6 +1863,7 @@ begin
 	region_get := r;
 end;
 
+{ restore a region onto video RAM and release it }
 procedure	region_put(var r: PREGION);
 var
 {$ifndef FPC}
@@ -1811,25 +1872,30 @@ var
 	p	: pchar;
 	i, w2	: longint;
 begin
-	w2 := r^.w shl 1;
-	p := r^.data;
+	if r = nil then exit;
+	if r^.data <> nil then
+	begin
+		w2 := r^.w shl 1;
+		p := r^.data;
 {$ifndef FPC}
-	q := VIDEO_RAM+ltx_offset(r^.l, r^.t);
-	for i := r^.t to r^.t+r^.h-1 do
-	begin
-		move(p^, q^, w2);
-		inc(p, w2);
-		inc(q, 160);
-	end;
+		q := VIDEO_RAM+ltx_offset(r^.l, r^.t);
+		for i := r^.t to r^.t+r^.h-1 do
+		begin
+			move(p^, q^, w2);
+			inc(p, w2);
+			inc(q, SCR_LINEW);
+		end;
 {$else}
-	for i := r^.t to r^.t+r^.h-1 do
-	begin
-		dosmemput(VSEG_ADDR, ltx_offset(r^.l, i), p^, w2);
-		inc(p, w2);
-	end;
+		for i := r^.t to r^.t+r^.h-1 do
+		begin
+			dosmemput(VSEG_ADDR, ltx_offset(r^.l, i), p^, w2);
+			inc(p, w2);
+		end;
 {$endif}
-        ltx_free(r^.data);
+	        ltx_free(r^.data);
+	end;
 	dispose(r);
+	r := nil;
 end;
 
 { dump the region's memory buffer onto disk }
@@ -1906,28 +1972,37 @@ begin
 end;
 
 { create a text-based bit block }
-function        block_create(w, h: integer): PBLOCK;
+{ allocate a block header, plus its data buffer when alloc is TRUE }
+function        block_new(w, h: longint; alloc: boolean): PBLOCK;
 var	blk	: PBLOCK;
 begin
-	block_create := nil;
-	if (w < 1) or (h < 1) then exit;
+	block_new := nil;
+	if (w < 1) or (h < 1) or (w * h > 65528) then exit;
+	if ltx_maxavail < sizeof(BLOCK_TYPE) then exit;
         new(blk);
         blk^.x	    := 0;
         blk^.y	    := 0;
         blk^.w	    := w;
         blk^.h	    := h;
         blk^.size   := w * h;
-	blk^.attach := FALSE;
+	blk^.attach := not alloc;
+	blk^.data   := nil;
 
-        if ltx_memavail < blk^.size then
+        if alloc then
         begin
-                dispose(blk);
-                block_create := nil;
-                exit;
+	        blk^.data := ltx_malloc(blk^.size);
+	        if blk^.data = nil then
+	        begin
+	                dispose(blk);
+	                exit;
+	        end;
         end;
+        block_new := blk;
+end;
 
-        blk^.data := ltx_malloc(blk^.size);
-        block_create := blk;
+function        block_create(w, h: integer): PBLOCK;
+begin
+	block_create := block_new(w, h, TRUE);
 end;
 
 { free a text-based bit block }
@@ -2084,6 +2159,8 @@ var	blk	: PBLOCK;
         w, h    : word;
         p	: pchar;
 begin
+	block_attach := nil;
+	if buffer = nil then exit;
 	p := pchar(buffer);
 
         w := word((p+0)^) + word((p+1)^) shl 8;	{ get width }
@@ -2092,17 +2169,17 @@ begin
         h := word((p+0)^) + word((p+1)^) shl 8;	{ get height }
         inc(p, 2);
 
-        blk := block_create(w, h);
-        blk^.attach := TRUE;		{ notice }
-        blk^.data   := p;		{ attach pointer to data }
+        blk := block_new(w, h, FALSE);	{ no buffer: data lives in 'buffer' }
+        if blk <> nil then blk^.data := p;
 	block_attach := blk;
 end;
 
 { map a bitmap into text-based bit block, using singled width }
 procedure	block_mapper(blk: PBLOCK; buf: pchar; c: char);
 var	p, q	: pchar;
-	i	: integer;
+	i	: longint;
 begin
+	if (blk = nil) or (buf = nil) then exit;
 	p := buf;
         q := blk^.data;
         for i := 1 to blk^.size do

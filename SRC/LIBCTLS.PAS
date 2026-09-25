@@ -528,7 +528,9 @@ begin
         { extracts each line into a list }
         lines  := 0;
         mlen   := 0;
-        while (text <> '') and (lines < MAX_DLG_LINE) do
+        { the box needs 8 extra rows for its frame and the version lines }
+        while (text <> '') and (lines < MAX_DLG_LINE) and
+              (lines < SCR_HEIGHT - 8) do
         begin
         	inc(lines);
                 list[lines] := tokenize(text, ENDL);
@@ -537,7 +539,7 @@ begin
         end;
 
         { setting up the dialog }
-        w := ltx_max(mlen + 8, 32);
+        w := ltx_min(ltx_max(mlen + 8, 32), SCR_WIDTH);
         h := lines + 8;
         ltx_validate_rect(x, y, w, h);
 
@@ -685,25 +687,38 @@ var	i, f, s	: longint;
 begin
 	DRIVE_LIST.count := 0;
         for i := 1 to 26 do
+	if drive_valid(i) then
 	begin
-        	f := drive_free(i);
-	        if f >= 0 then
-        	begin
-                	inc(DRIVE_LIST.count);
-                        s := drive_size(i);
-                        DRIVE_LIST.list[DRIVE_LIST.count].drive := chr(i + 64);
-                        DRIVE_LIST.list[DRIVE_LIST.count].free  := f;
-                        DRIVE_LIST.list[DRIVE_LIST.count].size  := s;
-        	end;
+		{ do not query removable drives: an empty one prompts the user }
+		if drive_removable(i) then
+		begin
+			f := -1;
+			s := -1;
+		end
+		else
+		begin
+	        	f := drive_free(i);
+	        	s := drive_size(i);
+		end;
+               	inc(DRIVE_LIST.count);
+                DRIVE_LIST.list[DRIVE_LIST.count].drive := chr(i + 64);
+                DRIVE_LIST.list[DRIVE_LIST.count].free  := f;
+                DRIVE_LIST.list[DRIVE_LIST.count].size  := s;
         end;
+end;
+
+{ size text for the drive list, 'N/A' when unknown }
+function	driveSizeText(v: longint): string;
+begin
+	if v < 0 then driveSizeText := 'N/A' else driveSizeText := unitize(v);
 end;
 
 function	driveGetItemString(i: longint): string;
 begin
 	with DRIVE_LIST do
 	        driveGetItemString := 	'  '+list[i].drive+': '+
-                                	lpad(unitize(list[i].free), 12) + ' '+
-                                        lpad(unitize(list[i].size), 12);
+                                	lpad(driveSizeText(list[i].free), 12) + ' '+
+                                        lpad(driveSizeText(list[i].size), 12);
 end;
 
 function        drivePicker(x, y, norm, hilight: integer; shade: SHADING; title: string): string;
