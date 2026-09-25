@@ -3,7 +3,7 @@
 {   LIBTEXT.PAS                                                              }
 {   -----------                                                              }
 {   Core library for text user interface game under DOS                      }
-{   Version 1.3                                                              }
+{   Version 1.5                                                              }
 {                                                                            }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2016-2021 by Infinity Group                               }
@@ -29,8 +29,8 @@ uses    go32;
 { ///////////////////////////// DEFINITIONS //////////////////////////////// }
 
 const
-	LIBTEXT_VERSION	= $0104;	{ library version }
-	LIBTEXT_BUILD	= '0714';	{ library build   }
+	LIBTEXT_VERSION	= $0105;	{ library version }
+	LIBTEXT_BUILD	= '0925';	{ library build   }
 	LIBTEXT_INIT	: boolean = FALSE;
 
 	SCR_WIDTH	= 80;		{ text-mode screen width }
@@ -673,8 +673,10 @@ end;
 { get current video mode }
 function	ltx_getmode: byte; assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
 	mov	ah, $0F
 	int	$10
+	pop	bx
 end;
 
 function	ltx_version: string;
@@ -1207,9 +1209,10 @@ begin
 end;
 
 { control text blinking }
+{ parameters are read before AX is loaded: FPC passes them in registers }
 procedure	blink(flag: boolean); assembler;
 asm
-	mov	ax, $1003
+	push	bx			{ EBX must survive calls under FPC }
 	mov	bl, flag
 	or	bl, bl
 	jz	@off
@@ -1221,30 +1224,37 @@ asm
 	mov	bl, 0
 
 @done:
+	mov	ax, $1003
 	int	10h
+	pop	bx
 end;
 
 { cursor size control }
 procedure	cursor(size: word); assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
+	mov	cx, size		{ before AH: FPC passes size in AX }
 	mov	ah, $01
 	mov	bh, 0
-	mov	cx, size
 	int	$10
+	pop	bx
 end;
 
 { return the shape of the cursor }
 function	cursor_shape: word; assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
 	mov	ah, $03
 	mov	bh, 0
 	int	$10
 	mov	ax, cx
+	pop	bx
 end;
 
 { move the cursor to coordinate (x, y), ranged in (1-80,1-25) }
 procedure	gotoxy(x, y: byte); assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
 	dec	x
 	dec	y
 	mov     ah, $02
@@ -1252,26 +1262,31 @@ asm
 	mov	dh, y
 	mov	dl, x
 	int	$10
+	pop	bx
 end;
 
 { return the x-coordinate of the cursor }
 function	wherex: byte; assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
 	mov	ah, $03
 	mov	bh, 0
 	int	$10
 	inc	dl
 	mov	al, dl
+	pop	bx
 end;
 
 { return the y-coordinate of the cursor }
 function	wherey: byte; assembler;
 asm
+	push	bx			{ EBX must survive calls under FPC }
 	mov	ah, $03
 	mov	bh, 0
 	int	$10
 	inc	dh
 	mov	al, dh
+	pop	bx
 end;
 
 { convert an attribute byte to control sequence }

@@ -128,8 +128,8 @@ begin
                         print(PANEL_X + 2, PANEL_Y + 17, '~07.  ~0BENTER: ~03STEPPING');
                         print(PANEL_X + 2, PANEL_Y + 18, '~07.  ~0A    P: ~02PAUSE~07/~02RESUME');
                         print(PANEL_X + 2, PANEL_Y + 19, '~07.  ~0A    R: ~02RANDOMIZE');
-                        print(PANEL_X + 2, PANEL_Y + 20, '~07.  ~0D LEFT: ~05FASTER');
-                        print(PANEL_X + 2, PANEL_Y + 21, '~07.  ~0DRIGHT: ~05SLOWER');
+                        print(PANEL_X + 2, PANEL_Y + 20, '~07.  ~0D LEFT: ~05SLOWER');
+                        print(PANEL_X + 2, PANEL_Y + 21, '~07.  ~0DRIGHT: ~05FASTER');
                         print(PANEL_X + 2, PANEL_Y + 22, '~07.  ~0C  ESC: ~04BACK');
 		end;
         UI_EDIT:
