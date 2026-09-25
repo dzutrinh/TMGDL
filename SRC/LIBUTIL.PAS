@@ -324,7 +324,7 @@ end;
 function	path_norm(dirname: string): string;
 begin
 	if length(dirname) > 3 then
-		if dirname[length(dirname)] = '\\' then dec(dirname[0]);
+		if dirname[length(dirname)] = '\' then dec(dirname[0]);
         path_norm := dirname;
 end;
 
@@ -335,7 +335,7 @@ begin
 	if length(dirname) = 3 then
 		if (upcase(dirname[1]) in ['A'..'Z']) and
 		   (dirname[2] = ':') and
-		   (dirname[3] = '\\') then
+		   (dirname[3] = '\') then
 			path_root := TRUE;
 end;
 
@@ -557,6 +557,7 @@ var	i, start,
 begin
 	folder_create := FALSE;
         if dirname = '' then exit;
+        ret := FALSE;
 
 	dirname := path_norm(dirname);
         ps	:= path_tokenizer(dirname);
@@ -808,6 +809,7 @@ end;
 
 function	text_rewind(var tf: TEXT_FILE): boolean;
 begin
+	text_rewind := FALSE;
 	if tf = nil then exit;
         {$I-}
         reset(tf^.fi);
@@ -823,6 +825,7 @@ end;
 function	text_readln(var tf: TEXT_FILE): string;
 var     s	: string;
 begin
+	text_readln := '';
 	if tf = nil then exit;
         readln(tf^.fi, s);
         text_readln := s;
@@ -832,6 +835,7 @@ function	text_getline(var tf: TEXT_FILE): string;
 var	tmp, s	: string;
 	i, epos	: integer;
 begin
+	text_getline := '';
 	if tf = nil then exit;
 	repeat
 		s := text_readln(tf);

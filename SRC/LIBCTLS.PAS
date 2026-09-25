@@ -429,9 +429,9 @@ begin
         if lb = nil then exit;
 
 	vis := lb^.show;
-	if not vis then labelHide(lb);
+	if vis then labelHide(lb);
 	lb^.text := text;
-	if lb^.show then labelShow(lb);
+	if vis then labelShow(lb);
 end;
 
 { //////////////////////////// COLOR PICKER API //////////////////////////// }
@@ -780,7 +780,7 @@ begin
         scr^.len     := len;
         scr^.min     := min;
         scr^.max     := max;
-        scr^.value   := 0;
+        scr^.value   := min;
         scr^.style   := style;
         scr^.shade   := shade;
 
@@ -871,12 +871,8 @@ function	sliderCreate(title: string; frame: boolean;
 			     shades: SHADING): PSLIDER;
 var	sld	: PSLIDER;
 begin
-	if ltx_memavail < sizeof(SLIDER_TYPE) then
-	begin
-		sliderCreate := nil;
-		exit;
-	end;
-	
+	sliderCreate := nil;
+	if ltx_memavail < sizeof(SLIDER_TYPE) then exit;
 	if (max < 2) then exit;
 
 	len := ltx_max(len, SLIDER_DEFWD);
@@ -1091,6 +1087,7 @@ var	w, h,
 	var	value	: boolean;
 		i	: byte;
 	begin
+		value := FALSE;
 		for i := 1 to m^.size do
 			value := value or m^.list[i].pop;
 		menu_haspop := value;
@@ -2012,8 +2009,6 @@ begin
         end
         else
         begin
-                prints(1, 1, $0E, itoa(lv^.count)+'-'+itoa(lv^.h)+'='+itoa(lv^.range));
-                prints(1, 2, $0A, lpad(itoa(lv^.citem), 4));
                 case key of
                 KEY_DOWN:       if (lv^.citem <= lv^.range) then inc(lv^.citem);
                 KEY_UP:		if lv^.citem > 1 then dec(lv^.citem);
@@ -2093,7 +2088,8 @@ end;
 function	logviewCreate(x, y, w, h, attr: integer): PLOGVIEW;
 var	log	: PLOGVIEW;
 begin
-        if (h = 0) or (w = 0) then exit;
+        logviewCreate := nil;
+        if (h <= 0) or (w <= 0) then exit;
         w := ltx_min(w, SCR_WIDTH);
         h := ltx_min(h, MAX_DLG_LINE);
         ltx_validate_rect(x, y, w, h);

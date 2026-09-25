@@ -49,8 +49,8 @@ const
 	CURSOR_ON	= $0607;	{ restore cursor }
 	CURSOR_BLOCK	= $0107;	{ block cursor }
 
-	BLINK_OFF	= FALSE;	{ no high-intensity backgrounds }
-	BLINK_ON	= TRUE;		{ enable high-intensity backgrounds }
+	BLINK_OFF	= FALSE;	{ enable high-intensity backgrounds }
+	BLINK_ON	= TRUE;		{ blinking text, no high-intensity backgrounds }
 
 	CLEAR_COLOR	: byte = 0;	{ default background color }
 
@@ -292,6 +292,7 @@ function    ltx_bit: SCREEN;
 function	ltx_malloc(size: longint): pointer;
 procedure	ltx_free(var pt);
 function	ltx_memavail: longint;
+function	ltx_maxavail: longint;
 procedure	ltx_timer_init;
 procedure	ltx_timer_done;
 function	ltx_timer: longint;
@@ -469,7 +470,11 @@ begin
 {$ifdef	__TMT__}
         writeln('COMPILER     : ', 'TMT PASCAL');
 {$else}
+{$ifdef	FPC}
+        writeln('COMPILER     : ', 'FREE PASCAL');
+{$else}
         writeln('COMPILER     : ', 'BORLAND PASCAL');
+{$endif}
 {$endif}
 	writeln('------------------------------------------');
 	writeln('MEMORY BEFORE: ', g_memstate.membf:12, ' bytes (', unitize(g_memstate.membf), ')');
@@ -509,7 +514,8 @@ var     SCR_SAVE	: record	{ old screen data }
 { initialize the LIBTEXT library - must be called before any other API calls }
 procedure       ltx_init;
 begin
-	if ltx_getmode = MONO then
+	MONO_ADAPTER := ltx_getmode = MONO;
+	if MONO_ADAPTER then
 	begin
 {$ifdef __TMT__}
 		VIDEO_RAM := pchar  ($B0000);
@@ -626,6 +632,16 @@ begin
 {$endif}
 end;
 
+{ size of the largest free heap block, the limit for a single allocation }
+function	ltx_maxavail: longint;
+begin
+{$ifndef FPC}
+	ltx_maxavail := maxavail;
+{$else}
+        ltx_maxavail := high(longint);
+{$endif}
+end;
+
 { switch video mode }
 procedure	ltx_setmode(mode: byte); assembler;
 asm
@@ -649,7 +665,7 @@ end;
 { initialize high precision timer in milliseconds }
 procedure	ltx_timer_init; assembler;
 asm
-	mov     dx, $43			{ 8524 timer control word }
+	mov     dx, $43			{ 8254 timer control word }
 	mov	al, $36
 	out	dx, al
 
@@ -741,7 +757,7 @@ begin
 {$else}
         if word(ltx_bit) = VSEG_ADDR then
                 MEM[word(ltx_bit):ltx_offset(x, y)] := byte(c)
-        else    (ltx_bit + ltx_offset(x, y) + 1)^ := c;
+        else    (ltx_bit + ltx_offset(x, y))^ := c;
 {$endif}
 end;
 
@@ -1060,7 +1076,8 @@ end;
 procedure	blink(flag: boolean); assembler;
 asm
 	mov	ax, $1003
-	cmp	[flag], 0
+	mov	bl, flag
+	or	bl, bl
 	jz	@off
 
 	mov	bl, 1
@@ -1191,7 +1208,7 @@ begin
         oy   := wherey;
         oc   := cursor_shape;
 	done := FALSE;
-        gotoxy(x, y+pt);
+        gotoxy(x+pt, y);
         flushkeys;
         vsync;
         cursor(CURSOR_ON);
@@ -1349,7 +1366,7 @@ var	dlg	: PDIALOG;
 	tl	: integer;
 begin
 	dialog_create := nil;
-        if maxavail < sizeof(DIALOG_TYPE) then exit;
+        if ltx_maxavail < sizeof(DIALOG_TYPE) then exit;
 	new(dlg);
 
         dlg^.lines  := 0;
@@ -1480,7 +1497,7 @@ function        ltoa(v: longint): string;
 var	text	: string;
 begin
 	text := '';
-	if v = 0 then text := '-' else str(v, text);
+	str(v, text);
 	ltoa := text;
 end;
 
@@ -1515,10 +1532,10 @@ function	tohex(n, w: longint): string;
 var	s	: string;
 begin
 	s := '';
-        if n < 0 then n := not n;
+	{ shr is a logical shift, so negative values print as unsigned 32-bit }
 	while n <> 0 do
 	begin
-		s := HEXA_DIGITS[n mod 16] + s;
+		s := HEXA_DIGITS[n and 15] + s;
 		n := n shr 4;
 	end;
 	while length(s) < w do s := '0'+s;
@@ -1818,6 +1835,7 @@ end;
 function        block_create(w, h: integer): PBLOCK;
 var	blk	: PBLOCK;
 begin
+	block_create := nil;
 	if (w < 1) or (h < 1) then exit;
         new(blk);
         blk^.x	    := 0;
