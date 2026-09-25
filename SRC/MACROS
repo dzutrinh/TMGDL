@@ -1,4 +1,8 @@
 #------------------------------------------------------------------------------
+# TMGDL build settings, included by the SRC, GAMES and TOOLS makefiles
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 # File utilities
 #------------------------------------------------------------------------------
 RM=rm		# 'erase' or 'del' under DOS
@@ -8,11 +12,11 @@ MV=mv		# 'move' under DOS
 UPX=upx		# optional executable compressor
 
 #------------------------------------------------------------------------------
-# Compilers: 
-# . Turbo Pascal = TPC
-# . TMT Pascal   = TMTPC
-# . Free Pascal  = FPC
-# Please making sure that the above compilers can be found
+# Compilers:
+# . Turbo/Borland Pascal = TPC
+# . TMT Pascal           = TMTPC
+# . Free Pascal          = FPC (go32v2)
+# Please make sure that the above compilers can be found
 # under the 'PATH=' environment variable.
 #------------------------------------------------------------------------------
 TMTROOT=C:\TMT
@@ -23,20 +27,33 @@ TMTPC=$(TMTROOT)\BIN\tmtpc
 TPC=$(TP7ROOT)\BIN\tpc
 FPC=$(FPCROOT)\BIN\GO32V2\fpc
 
+#------------------------------------------------------------------------------
+# Where the compiled library units are installed ('make install' in SRC)
+#------------------------------------------------------------------------------
 LIBROOT=\TMGDL\TEXTMODE
 LIBDIR=$(LIBROOT)\LIB
 
+#------------------------------------------------------------------------------
+# Compiler selection: TMT Pascal unless 'make' is given -DUSE_BPC or
+# -DUSE_FPC (SRC\BUILD.BAT: 'BUILD BPC' or 'BUILD FPC').
+# CFLAGS: library build (always rebuilds every unit, so no stale units
+#         are left behind), LFLAGS: unit search path for games and tools.
+#------------------------------------------------------------------------------
+!if $d(USE_FPC)
+# ---- FREE PASCAL FLAGS --------------------
+PC=$(FPC)
+CFLAGS=-So -O3 -B
+LFLAGS=-So -Xs -Op2 -O3 -Fu$(FPCROOT)\UNITS\;$(LIBDIR);
+!else
+!if $d(USE_BPC)
 # ---- TURBO/BORLAND PASCAL FLAGS -----------
-#CFLAGS=-B
-#LFLAGS=-U.;$(TP7ROOT)\UNITS;$(LIBDIR)
-
-# ---- TMT PASCAL FLAGS ---------------------
+PC=$(TPC)
+CFLAGS=-B
+LFLAGS=-U.;$(TP7ROOT)\UNITS;$(LIBDIR)
+!else
+# ---- TMT PASCAL FLAGS (default) -----------
+PC=$(TMTPC)
 CFLAGS=-C -B
 LFLAGS=-UNIT:.;$(TMTROOT)\UNITS;$(LIBDIR)
-
-# ---- FREE PASCAL FLAGS --------------------
-#CFLAGS=-So -O3
-#LFLAGS=-So -Xs -Op2 -O3 -Fu$(FPCROOT)\UNITS\;$(LIBDIR);
-
-# select default Pascal compiler
-PC=$(TMTPC)
+!endif
+!endif

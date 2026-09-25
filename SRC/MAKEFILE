@@ -1,11 +1,24 @@
+#
+# Makefile for the TMGDL library (version 1.5)
+#
+#   make            build every unit (the compiler is selected in MACROS)
+#   make install    move the compiled units to $(LIBDIR)
+#   make clean      remove compiled units here and in $(LIBDIR)
+#
 !include "macros"
 
 SOURCE=libtmgd.pas
+UNITS=libtext.pas \
+	libutil.pas \
+	libctls.pas \
+	libpack.pas \
+	preps.inc
 
-all: $(SOURCE)
+all: $(SOURCE) $(UNITS)
 	@$(PC) $(CFLAGS) $(LFLAGS) $(SOURCE)
 
 install:
+	@if not exist $(LIBDIR)\NUL $(MD) $(LIBDIR)
 	@if exist *.TPU $(MV) *.TPU $(LIBDIR)
 	@if exist *.FPD $(MV) *.FPD $(LIBDIR)
 	@if exist *.O   $(MV) *.O   $(LIBDIR)
@@ -16,4 +29,7 @@ clean:
 	@if exist $(LIBDIR)\*.FPD $(RM) $(LIBDIR)\*.FPD
 	@if exist $(LIBDIR)\*.O   $(RM) $(LIBDIR)\*.O
 	@if exist $(LIBDIR)\*.PPU $(RM) $(LIBDIR)\*.PPU
-
+	@if exist *.TPU $(RM) *.TPU
+	@if exist *.FPD $(RM) *.FPD
+	@if exist *.O   $(RM) *.O
+	@if exist *.PPU $(RM) *.PPU
