@@ -49,8 +49,8 @@ const
 	CURSOR_ON	= $0607;	{ restore cursor }
 	CURSOR_BLOCK	= $0107;	{ block cursor }
 
-	BLINK_OFF	= FALSE;	{ no high-intensity backgrounds }
-	BLINK_ON	= TRUE;		{ enable high-intensity backgrounds }
+	BLINK_OFF	= FALSE;	{ enable high-intensity backgrounds }
+	BLINK_ON	= TRUE;		{ blinking text, no high-intensity backgrounds }
 
 	CLEAR_COLOR	: byte = 0;	{ default background color }
 
@@ -266,9 +266,13 @@ type    CONTROL_STATE	= (CS_NEXT,	{ indicate select next control     }
 const
 	MULTI_CONTROLS	: boolean = FALSE;
 
+{ BIOS timer ticks for INT 1AH }
+{$ifdef	FPC}
+function	ticks: longint;
+{$else}
 var
-	{ BIOS timer ticks for INT 1AH }
 	ticks		: longint absolute $0040:$006C;
+{$endif}
 
 { ///////////////////////////// LOW-LEVEL API ////////////////////////////// }
 
@@ -292,9 +296,10 @@ function    ltx_bit: SCREEN;
 function	ltx_malloc(size: longint): pointer;
 procedure	ltx_free(var pt);
 function	ltx_memavail: longint;
+function	ltx_maxavail: longint;
 procedure	ltx_timer_init;
 procedure	ltx_timer_done;
-function	ltx_timer: longint;
+function	ltx_timer: longint;		{ milliseconds }
 function	ltx_offset(x, y: word): word;
 function	ltx_makeb(l, h: byte): byte;
 function	ltx_makew(c: char; a: byte): word;
@@ -321,7 +326,8 @@ procedure	ltx_validate_rect(var x, y: integer; w, h: integer);
 
 procedure	vsync;
 procedure	vsync_sleep(n: longint);
-procedure	sleep(duration: longint);
+procedure	sleep(duration: longint);	{ milliseconds }
+procedure	ltx_idle;
 
 { ////////////////////////////// KEYBOARD API ////////////////////////////// }
 
@@ -469,7 +475,11 @@ begin
 {$ifdef	__TMT__}
         writeln('COMPILER     : ', 'TMT PASCAL');
 {$else}
+{$ifdef	FPC}
+        writeln('COMPILER     : ', 'FREE PASCAL');
+{$else}
         writeln('COMPILER     : ', 'BORLAND PASCAL');
+{$endif}
 {$endif}
 	writeln('------------------------------------------');
 	writeln('MEMORY BEFORE: ', g_memstate.membf:12, ' bytes (', unitize(g_memstate.membf), ')');
@@ -478,6 +488,14 @@ begin
 	writeln('CHANGES      : ', delta:12, ' bytes');
 	writeln('==========================================');
 end;
+
+{$ifdef FPC}
+{ the go32v2 data segment does not start at 0, go through the DOS selector }
+function	ticks: longint;
+begin
+	ticks := MEML[$0040:$006C];
+end;
+{$endif}
 
 {$ifndef FPC}
 function	inportb(px: word): byte;
@@ -504,12 +522,15 @@ end;
 var     SCR_SAVE	: record	{ old screen data }
 		data	: array[0..SCR_SIZE-1] of byte;
                 cx, cy	: word;
+                mode	: byte;
 	end;
 
 { initialize the LIBTEXT library - must be called before any other API calls }
 procedure       ltx_init;
 begin
-	if ltx_getmode = MONO then
+	SCR_SAVE.mode := ltx_getmode;
+	MONO_ADAPTER := SCR_SAVE.mode = MONO;
+	if MONO_ADAPTER then
 	begin
 {$ifdef __TMT__}
 		VIDEO_RAM := pchar  ($B0000);
@@ -558,7 +579,7 @@ end;
 procedure	ltx_done;
 begin
 	if not LIBTEXT_INIT then exit;
-	ltx_setmode(CO80);
+	if MONO_ADAPTER then ltx_setmode(MONO) else ltx_setmode(CO80);
 
         with SCR_SAVE do
         begin
@@ -595,8 +616,12 @@ function	ltx_malloc(size: longint): pointer;
 var	p	: pointer;
 begin
 	ltx_malloc	:= nil;
+        if size < 0 then exit;
         size	:= size + 4;
-        if ltx_memavail < size then exit;
+{$ifdef VER70}
+        if size > 65528 then exit;	{ getmem takes a word under BP }
+{$endif}
+        if ltx_maxavail < size then exit;
 
 	getmem(p, size);
         move(size, p^, 4);
@@ -626,6 +651,16 @@ begin
 {$endif}
 end;
 
+{ size of the largest free heap block, the limit for a single allocation }
+function	ltx_maxavail: longint;
+begin
+{$ifndef FPC}
+	ltx_maxavail := maxavail;
+{$else}
+        ltx_maxavail := high(longint);
+{$endif}
+end;
+
 { switch video mode }
 procedure	ltx_setmode(mode: byte); assembler;
 asm
@@ -646,36 +681,91 @@ begin
 	ltx_version := vtos(LIBTEXT_VERSION, LIBTEXT_BUILD);
 end;
 
-{ initialize high precision timer in milliseconds }
-procedure	ltx_timer_init; assembler;
-asm
-	mov     dx, $43			{ 8524 timer control word }
-	mov	al, $36
-	out	dx, al
+{ ////////////////////////////// TIMER CORE //////////////////////////////// }
+{ ltx_timer counts milliseconds from the BIOS tick count (18.2 Hz) plus the }
+{ position of PIT channel 0 inside the current tick. The PIT keeps its BIOS }
+{ setup, so the DOS clock is never disturbed.                               }
 
-	mov	dx, $40			{ new timer constant for 1.19318 Mhz }
-	mov	al, $A9                 { 04A9h = 1193 }
-	out	dx, al
-	mov	al, $04
-	out	dx, al
-end;
+const	TICKS_PER_DAY	= $1800B0;	{ BIOS tick count wraps at midnight }
 
-function	ltx_timer: longint;
+	TIMER_LAST_TICKS: longint = 0;	{ last raw BIOS tick count seen      }
+	TIMER_DAY_BASE	: longint = 0;	{ ticks added by midnight rollovers  }
+	TIMER_LAST_MS	: longint = 0;	{ last value returned by ltx_timer   }
+
+{ read the BIOS ticks and the PIT clocks elapsed in that tick (0..65535) }
+procedure	timer_sample(var t, elapsed: longint);
+var	status,
+	lo, hi,
+	irr	: byte;
+	count	: longint;
 begin
-	ltx_timer := ticks;
+	asm cli end;
+	t := ticks;
+	outportb($43, $C2);		{ read-back: latch status + count, ch. 0 }
+	status := inportb($40);
+	lo     := inportb($40);
+	hi     := inportb($40);
+	outportb($20, $0A);		{ PIC: select the request register }
+	irr    := inportb($20);
+	asm sti end;
+
+	count := lo or (word(hi) shl 8);
+	if count = 0 then count := 65536;
+
+	if (status and $06) = $06 then
+	begin
+		{ mode 3 (BIOS default): the counter runs down by 2 twice per }
+		{ tick, OUT is high in the first half and low in the second   }
+		elapsed := (65536 - count) shr 1;
+		if (status and $80) = 0 then inc(elapsed, 32768);
+	end
+	else	elapsed := 65536 - count;	{ mode 2: counts down once }
+
+	if elapsed < 0 then elapsed := 0;
+	if elapsed > 65535 then elapsed := 65535;
+
+	{ the counter wrapped but IRQ0 has not been serviced yet }
+	if ((irr and 1) <> 0) and (elapsed < 32768) then inc(t);
 end;
 
-{ restore old timer frequency }
-procedure	ltx_timer_done; assembler;
-asm
-	mov	dx, $43			{ 8253 control word }
-	mov	al, $36 		{ old timer 0 constant = 0 }
-	out	dx, al
+{ milliseconds since the program started using the timer (monotonic) }
+function	ltx_timer: longint;
+var	t, elapsed,
+	ms	: longint;
+begin
+	timer_sample(t, elapsed);
 
-	mov	dx, $40
-	xor	al, al
-	out	dx, al
-	out	dx, al
+	{ BIOS resets the tick count at midnight }
+	if t < TIMER_LAST_TICKS - TICKS_PER_DAY div 2 then
+		inc(TIMER_DAY_BASE, TICKS_PER_DAY);
+	TIMER_LAST_TICKS := t;
+	inc(t, TIMER_DAY_BASE);
+
+	{ a tick is 65536 / 1193182 s = 54.925 ms = 55 - 3/40 ms }
+	ms := t * 55 - t * 3 div 40 + elapsed * 55 div 65536;
+
+	{ never step backwards because of a late IRQ0 or a sampling race }
+	if (ms < TIMER_LAST_MS) and (TIMER_LAST_MS - ms < 1000) then
+		ms := TIMER_LAST_MS;
+	TIMER_LAST_MS := ms;
+	ltx_timer := ms;
+end;
+
+{ kept for compatibility: the timer needs no setup and no longer }
+{ reprograms the PIT (which made the DOS clock run 55x fast)     }
+procedure	ltx_timer_init;
+begin
+	TIMER_LAST_TICKS := ticks;
+end;
+
+procedure	ltx_timer_done;
+begin
+end;
+
+{ give the CPU back to DOS/multitaskers while busy-waiting }
+procedure	ltx_idle; assembler;
+asm
+	int	$28
 end;
 
 { determine the offset of (x, y) inside a screen buffer, (1-80,1-25) }
@@ -696,9 +786,35 @@ begin
 	ltx_makew := ord(c) or a shl 8;
 end;
 
+{ TRUE if (x, y) lies on the screen }
+function	on_screen(x, y: longint): boolean;
+begin
+	on_screen := (x >= 1) and (x <= SCR_WIDTH) and
+		     (y >= 1) and (y <= SCR_HEIGHT);
+end;
+
+{ clip a rectangle to the screen, FALSE if nothing of it is visible }
+function	clip_rect(var x, y, w, h: integer): boolean;
+begin
+	if x < 1 then
+	begin
+		inc(w, x - 1);
+		x := 1;
+	end;
+	if y < 1 then
+	begin
+		inc(h, y - 1);
+		y := 1;
+	end;
+	if x + w - 1 > SCR_WIDTH  then w := SCR_WIDTH  - x + 1;
+	if y + h - 1 > SCR_HEIGHT then h := SCR_HEIGHT - y + 1;
+	clip_rect := (w > 0) and (h > 0);
+end;
+
 { put a word to a specified coordinate (x, y) in the current buffer }
 procedure	ltx_setw(x, y: word; data: word);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         pword(ltx_bit + ltx_offset(x, y))^ := data;
 {$else}
@@ -711,6 +827,8 @@ end;
 { return a word at the specified coordinate (x, y) in the current buffer }
 function	ltx_getw(x, y: word): word;
 begin
+	ltx_getw := 0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         ltx_getw := pword(ltx_bit + ltx_offset(x, y))^;
 {$else}
@@ -724,6 +842,7 @@ end;
 { modify the attribute at coordinate (x, y) }
 procedure	ltx_seta(x, y: word; a: byte);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y) + 1)^ := chr(a);
 {$else}
@@ -736,18 +855,21 @@ end;
 { modify the character at coordinate (x, y) }
 procedure	ltx_setc(x, y: word; c: char);
 begin
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y))^ := c;
 {$else}
         if word(ltx_bit) = VSEG_ADDR then
                 MEM[word(ltx_bit):ltx_offset(x, y)] := byte(c)
-        else    (ltx_bit + ltx_offset(x, y) + 1)^ := c;
+        else    (ltx_bit + ltx_offset(x, y))^ := c;
 {$endif}
 end;
 
 { retrieve the attribute at coordinate (x, y) }
 function	ltx_geta(x, y: word): byte;
 begin
+	ltx_geta := 0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
         ltx_geta := byte((ltx_bit + ltx_offset(x, y) + 1)^);
 {$else}
@@ -760,6 +882,8 @@ end;
 { retrieve the character at coordinate (x, y) }
 function	ltx_getc(x, y: word): char;
 begin
+	ltx_getc := #0;
+	if not on_screen(x, y) then exit;
 {$ifndef FPC}
 	ltx_getc := (ltx_bit + ltx_offset(x, y))^;
 {$else}
@@ -775,7 +899,7 @@ var	p	: pchar;
 	i, j, o : word;
 	v	: char;
 begin
-	if (w <= 0) or (h <= 0) then exit;
+	if not clip_rect(x, y, w, h) then exit;
 	v := char(a);
 {$ifndef FPC}
         p := ltx_bit + ltx_offset(x, y) + 1;
@@ -813,7 +937,7 @@ var	p	: pchar;
 	i, j, o : word;
         v       : byte;
 begin
-	if (w <= 0) or (h <= 0) then exit;
+	if not clip_rect(x, y, w, h) then exit;
 {$ifndef FPC}
 	p := ltx_bit + ltx_offset(x, y);
 	for j := 0 to h - 1 do
@@ -853,8 +977,7 @@ var	p	: pword;
 	i, j,
         r, o    : integer;
 begin
-	if (w <= 0) or (h <= 0) then exit;
-        CLEAR_COLOR := v shr 12;
+	if not clip_rect(x, y, w, h) then exit;
 	r := SCR_WIDTH-w;
 {$ifndef FPC}
         p := pword(ltx_bit + ltx_offset(x, y));
@@ -924,13 +1047,17 @@ begin
 	ltx_centery := (SCR_HEIGHT - h) shr 1 + 1;
 end;
 
-{ ensure a rectangle always inside the visible screen space }
+{ ensure a rectangle always inside the visible screen space, negative }
+{ coordinates mean centered; a rectangle larger than the screen is    }
+{ placed at the top-left corner and clipped when drawn                }
 procedure	ltx_validate_rect(var x, y: integer; w, h: integer);
 begin
 	if (x < 0) then x := ltx_centerx(w);
 	if (y < 0) then y := ltx_centery(h);
-	while (x + w - 1 > SCR_WIDTH) do if (x > 0) then dec(x);
-	while (y + h - 1 > SCR_HEIGHT) do if (y > 0) then dec(y);
+	if (x + w - 1 > SCR_WIDTH) then x := SCR_WIDTH - w + 1;
+	if (y + h - 1 > SCR_HEIGHT) then y := SCR_HEIGHT - h + 1;
+	if (x < 1) then x := 1;
+	if (y < 1) then y := 1;
 end;
 
 { smallest value of a and b }
@@ -969,12 +1096,13 @@ begin
 	end;
 end;
 
-{ timer-based delay }
+{ timer-based delay in milliseconds }
 procedure	sleep(duration: longint);
-var	timer	: longint;
+var	start	: longint;
 begin
-	timer := ticks;
-	while abs(ticks-timer) < duration do;
+	if duration <= 0 then exit;
+	start := ltx_timer;
+	while ltx_timer - start < duration do ltx_idle;
 end;
 
 { read a character }
@@ -1009,11 +1137,20 @@ begin
 end;
 
 { set keyboard typematic speed }
+{ set the typematic byte (bits 0-4 rate, bits 5-6 delay) through the BIOS, }
+{ which handles the keyboard controller handshake                        }
 procedure	keyboard_speed(speed: word);
+var	rate,
+	delay	: byte;
 begin
-	outportb($60, $F3);
-	sleep(2);
-	outportb($60, speed);
+	rate  := speed and $1F;
+	delay := (speed shr 5) and 3;
+	asm
+		mov	ax, $0305
+		mov	bh, delay
+		mov	bl, rate
+		int	$16
+	end {$ifdef FPC}['EAX','EBX']{$endif};
 end;
 
 { return the pointer to the video RAM }
@@ -1027,7 +1164,7 @@ function        vscreen_alloc: SCREEN;
 var	scr	: SCREEN;
 begin
         scr := ltx_malloc(SCR_SIZE);
-	fillchar(scr^, SCR_SIZE, 0);
+	if scr <> nil then fillchar(scr^, SCR_SIZE, 0);
 	vscreen_alloc := scr;
 end;
 
@@ -1060,7 +1197,8 @@ end;
 procedure	blink(flag: boolean); assembler;
 asm
 	mov	ax, $1003
-	cmp	[flag], 0
+	mov	bl, flag
+	or	bl, bl
 	jz	@off
 
 	mov	bl, 1
@@ -1155,22 +1293,30 @@ begin
 	ltx_setw(x, y, ltx_makew(c, attr));
 end;
 
-{ print a text string on screen buffer }
+{ print a text string on screen buffer, clipped to the screen }
 procedure       prints(x, y, attr: longint; text: string);
-var	i	: longint;
+var	i,
+	first,
+	last	: longint;
 {$ifndef FPC}
 	p	: pword;
 {$endif}
 begin
+	if (y < 1) or (y > SCR_HEIGHT) then exit;
+	first := 1;				{ text[i] lands on column x+i-1 }
+	if x < 1 then first := 2 - x;
+	last := length(text);
+	if x + last - 1 > SCR_WIDTH then last := SCR_WIDTH - x + 1;
+	if first > last then exit;
 {$ifndef FPC}
-	p := pword(ltx_bit+ltx_offset(x, y));
-	for i := 1 to length(text) do
+	p := pword(ltx_bit+ltx_offset(x+first-1, y));
+	for i := first to last do
 	begin
 		p^ := ltx_makew(text[i], attr);
 		inc(p);
 	end;
 {$else}
-        for i := 1 to length(text) do
+        for i := first to last do
                 printc(x+i-1, y, attr, text[i]);
 {$endif}
 end;
@@ -1191,7 +1337,7 @@ begin
         oy   := wherey;
         oc   := cursor_shape;
 	done := FALSE;
-        gotoxy(x, y+pt);
+        gotoxy(x+pt, y);
         flushkeys;
         vsync;
         cursor(CURSOR_ON);
@@ -1240,6 +1386,15 @@ begin
 	ltx_fillw(1, 1, SCR_WIDTH, SCR_HEIGHT, ltx_makew(' ', attr));
 end;
 
+{ TRUE if st[i] starts a ~XY colour control sequence }
+function	is_control(const st: string; i: longint): boolean;
+begin
+	is_control := (i + 2 <= length(st)) and
+		      (st[i] = CONTROL_CHAR) and
+		      (st[i+1] in ['0'..'9', 'A'..'F', 'a'..'f']) and
+		      (st[i+2] in ['0'..'9', 'A'..'F', 'a'..'f']);
+end;
+
 { colorful text printing using control sequences ~XY, as follows. }
 { whereas: X = background color                                   }
 {          Y = foreground color                                   }
@@ -1254,9 +1409,7 @@ begin
 	while i <= length(st) do
 	begin
 		v := st[i];
-		if (v = CONTROL_CHAR) and
-		   (st[i+1] in ['0'..'9', 'A'..'F', 'a'..'f']) and
-		   (st[i+2] in ['0'..'9', 'A'..'F', 'a'..'f']) then
+		if is_control(st, i) then
 		begin
 			inc(i); v := upcase(st[i]);
 			case v of
@@ -1332,8 +1485,14 @@ var	i, c, l	: longint;
 begin
 	c := 0;
 	l := length(text);
-	for i := 1 to l do
-		if text[i] = CONTROL_CHAR then inc(c, 3);
+	i := 1;
+	while i <= l do
+		if is_control(text, i) then
+		begin
+			inc(c, 3);
+			inc(i, 3);
+		end
+		else	inc(i);
 	text_length := l-c;
 end;
 
@@ -1349,13 +1508,15 @@ var	dlg	: PDIALOG;
 	tl	: integer;
 begin
 	dialog_create := nil;
-        if maxavail < sizeof(DIALOG_TYPE) then exit;
+        if ltx_maxavail < sizeof(DIALOG_TYPE) then exit;
 	new(dlg);
 
         dlg^.lines  := 0;
         dlg^.mlen   := 0;
 
-        while (text <> '') and (dlg^.lines < MAX_DLG_LINE) do
+        { a dialog needs 4 extra rows for its frame and margins }
+        while (text <> '') and (dlg^.lines < MAX_DLG_LINE) and
+              (dlg^.lines < SCR_HEIGHT - 4) do
         begin
         	inc(dlg^.lines);
                 dlg^.text[dlg^.lines] := tokenize(text, ENDL);
@@ -1365,6 +1526,8 @@ begin
 
 	if w <= 0 then w := dlg^.mlen + 6  else w := ltx_max(dlg^.mlen + 6, w);
 	if h <= 0 then h := dlg^.lines + 4 else h := ltx_max(dlg^.lines + 4, h);
+	w := ltx_min(w, SCR_WIDTH);
+	h := ltx_min(h, SCR_HEIGHT);
 
         ltx_validate_rect(x, y, w, h);
 
@@ -1412,8 +1575,10 @@ end;
 
 procedure	dialog_destroy(var dlg: PDIALOG);
 begin
+        if dlg = nil then exit;
         if dlg^.show then dialog_hide(dlg);
         dispose(dlg);
+        dlg := nil;
 end;
 
 function	dialog_open(x, y, w, h: integer; shade: SHADING;
@@ -1437,6 +1602,7 @@ function        lpad(text: string; width: longint): string;
 var	tmp	: string;
 	d, l	: longint;
 begin
+	if width > 255 then width := 255;
 	l := length(text);
 	d := abs(l-width);
 	if l < width then
@@ -1454,6 +1620,7 @@ function        rpad(text: string; width: longint): string;
 var	tmp	: string;
 	d, l	: longint;
 begin
+	if width > 255 then width := 255;
 	l := length(text);
 	d := abs(l-width);
 	if l < width then
@@ -1470,6 +1637,8 @@ end;
 function	repl(ch: char; n: longint): string;
 var	st	: string;
 begin
+	if n < 0 then n := 0;
+	if n > 255 then n := 255;
 	fillchar(st[1], n, ch);
 	st[0] := chr(n);
 	repl := st;
@@ -1480,7 +1649,7 @@ function        ltoa(v: longint): string;
 var	text	: string;
 begin
 	text := '';
-	if v = 0 then text := '-' else str(v, text);
+	str(v, text);
 	ltoa := text;
 end;
 
@@ -1506,6 +1675,7 @@ var     r	: longint;
         e	: integer;
 begin
 	val(v, r, e);
+	if e <> 0 then r := 0;
         atol := r;
 end;
 
@@ -1515,10 +1685,10 @@ function	tohex(n, w: longint): string;
 var	s	: string;
 begin
 	s := '';
-        if n < 0 then n := not n;
+	{ shr is a logical shift, so negative values print as unsigned 32-bit }
 	while n <> 0 do
 	begin
-		s := HEXA_DIGITS[n mod 16] + s;
+		s := HEXA_DIGITS[n and 15] + s;
 		n := n shr 4;
 	end;
 	while length(s) < w do s := '0'+s;
@@ -1709,7 +1879,8 @@ begin
 	region_size := size;
 end;
 
-{ copy a region from video RAM to memory buffer }
+{ copy a region from video RAM to memory buffer, clipped to the screen; }
+{ nil when nothing is visible or memory is short                       }
 function	region_get(l, t, w, h: integer): PREGION;
 var	r	: PREGION;
 {$ifndef FPC}
@@ -1719,10 +1890,19 @@ var	r	: PREGION;
 	w2, i,
 	size	: longint;
 begin
+	region_get := nil;
+	if not clip_rect(l, t, w, h) then exit;
+	if ltx_maxavail < sizeof(TREGION) then exit;
+
 	new(r);
 	size := region_size(w, h);
 	w2   := w shl 1;
         r^.data := ltx_malloc(size);
+        if r^.data = nil then
+        begin
+        	dispose(r);
+        	exit;
+        end;
 
 	r^.l := l;	r^.t := t;
 	r^.w := w;	r^.h := h;
@@ -1734,7 +1914,7 @@ begin
 	for i := t to t+h-1 do
 	begin
 		move(p^, q^, w2);
-		inc(p, 160);
+		inc(p, SCR_LINEW);
 		inc(q, w2);
 	end;
 {$else}
@@ -1749,6 +1929,7 @@ begin
 	region_get := r;
 end;
 
+{ restore a region onto video RAM and release it }
 procedure	region_put(var r: PREGION);
 var
 {$ifndef FPC}
@@ -1757,93 +1938,147 @@ var
 	p	: pchar;
 	i, w2	: longint;
 begin
-	w2 := r^.w shl 1;
-	p := r^.data;
+	if r = nil then exit;
+	if r^.data <> nil then
+	begin
+		w2 := r^.w shl 1;
+		p := r^.data;
 {$ifndef FPC}
-	q := VIDEO_RAM+ltx_offset(r^.l, r^.t);
-	for i := r^.t to r^.t+r^.h-1 do
-	begin
-		move(p^, q^, w2);
-		inc(p, w2);
-		inc(q, 160);
-	end;
+		q := VIDEO_RAM+ltx_offset(r^.l, r^.t);
+		for i := r^.t to r^.t+r^.h-1 do
+		begin
+			move(p^, q^, w2);
+			inc(p, w2);
+			inc(q, SCR_LINEW);
+		end;
 {$else}
-	for i := r^.t to r^.t+r^.h-1 do
-	begin
-		dosmemput(VSEG_ADDR, ltx_offset(r^.l, i), p^, w2);
-		inc(p, w2);
-	end;
+		for i := r^.t to r^.t+r^.h-1 do
+		begin
+			dosmemput(VSEG_ADDR, ltx_offset(r^.l, i), p^, w2);
+			inc(p, w2);
+		end;
 {$endif}
-        ltx_free(r^.data);
+	        ltx_free(r^.data);
+	end;
 	dispose(r);
+	r := nil;
 end;
 
 { dump the region's memory buffer onto disk }
 procedure	region_dump(r: PREGION; filename: string);
 var	f	: FILE;
+	failed	: boolean;
 begin
+	if (r = nil) or (r^.data = nil) then exit;
 	assign(f, filename);
+	{$I-}
 	rewrite(f, 1);
+	if ioresult <> 0 then exit;
 	blockwrite(f, r^.l, sizeof(r^.l));
 	blockwrite(f, r^.t, sizeof(r^.t));
-	blockwrite(f, r^.w, sizeof(r^.h));
+	blockwrite(f, r^.w, sizeof(r^.w));
 	blockwrite(f, r^.h, sizeof(r^.h));
 	blockwrite(f, r^.data^, r^.size);
+	failed := ioresult <> 0;	{ also clears the error so close runs }
 	close(f);
+	if (ioresult <> 0) or failed then
+	begin
+		erase(f);
+		if ioresult <> 0 then ;	{ discard, nothing left to do }
+	end;
+	{$I+}
 end;
 
-{ read up a the region's data to memory buffer  }
+{ read up a the region's data to memory buffer, nil on failure }
 function	region_read(filename: string): PREGION;
 var     r	: PREGION;
 	f	: FILE;
+	ok	: boolean;
+	nr	: word;
 begin
-	new(r);
+	region_read := nil;
 	assign(f, filename);
+	{$I-}
 	reset(f, 1);
+	if ioresult <> 0 then exit;
 
-	blockread(f, r^.l, sizeof(r^.l));
-	blockread(f, r^.t, sizeof(r^.t));
-	blockread(f, r^.w, sizeof(r^.h));
-	blockread(f, r^.h, sizeof(r^.h));
+	new(r);
+	r^.data := nil;
+	ok := TRUE;
+	blockread(f, r^.l, sizeof(r^.l), nr); ok := ok and (nr = sizeof(r^.l));
+	blockread(f, r^.t, sizeof(r^.t), nr); ok := ok and (nr = sizeof(r^.t));
+	blockread(f, r^.w, sizeof(r^.w), nr); ok := ok and (nr = sizeof(r^.w));
+	blockread(f, r^.h, sizeof(r^.h), nr); ok := ok and (nr = sizeof(r^.h));
 
-	r^.size := region_size(r^.w, r^.h);
-        r^.data := ltx_malloc(r^.size);
-	blockread(f, r^.data^, r^.size);
-
+	ok := ok and (r^.l >= 1) and (r^.t >= 1) and (r^.w >= 1) and (r^.h >= 1) and
+	      (r^.l + r^.w - 1 <= SCR_WIDTH) and (r^.t + r^.h - 1 <= SCR_HEIGHT);
+	if ok then
+	begin
+		r^.size := region_size(r^.w, r^.h);
+	        r^.data := ltx_malloc(r^.size);
+	        ok := r^.data <> nil;
+	end;
+	if ok then
+	begin
+		blockread(f, r^.data^, r^.size, nr);
+		ok := nr = r^.size;
+	end;
+	ok := (ioresult = 0) and ok;	{ also clears the error so close runs }
 	close(f);
+	ok := (ioresult = 0) and ok;
+	{$I+}
+
+	if not ok then
+	begin
+		if r^.data <> nil then ltx_free(r^.data);
+		dispose(r);
+		exit;
+	end;
 	region_read := r;
 end;
 
 { create a text-based bit block }
-function        block_create(w, h: integer): PBLOCK;
+{ allocate a block header, plus its data buffer when alloc is TRUE }
+function        block_new(w, h: longint; alloc: boolean): PBLOCK;
 var	blk	: PBLOCK;
 begin
-	if (w < 1) or (h < 1) then exit;
+	block_new := nil;
+	if (w < 1) or (h < 1) or (w * h > 65528) then exit;
+	if ltx_maxavail < sizeof(BLOCK_TYPE) then exit;
         new(blk);
         blk^.x	    := 0;
         blk^.y	    := 0;
         blk^.w	    := w;
         blk^.h	    := h;
         blk^.size   := w * h;
-	blk^.attach := FALSE;
+	blk^.attach := not alloc;
+	blk^.data   := nil;
 
-        if ltx_memavail < blk^.size then
+        if alloc then
         begin
-                dispose(blk);
-                block_create := nil;
-                exit;
+	        blk^.data := ltx_malloc(blk^.size);
+	        if blk^.data = nil then
+	        begin
+	                dispose(blk);
+	                exit;
+	        end;
         end;
+        block_new := blk;
+end;
 
-        blk^.data := ltx_malloc(blk^.size);
-        block_create := blk;
+function        block_create(w, h: integer): PBLOCK;
+begin
+	block_create := block_new(w, h, TRUE);
 end;
 
 { free a text-based bit block }
 procedure	block_destroy(var blk: PBLOCK);
 begin
+        if blk = nil then exit;
         if (blk^.size <> 0) and not blk^.attach then
                 ltx_free(blk^.data);
         dispose(blk);
+        blk := nil;
 end;
 
 { blit a text-based bit block to screen at (x, y) using given attr }
@@ -1929,50 +2164,51 @@ end;
 { save a text-based bit block to disk }
 function	block_save(blk: PBLOCK; filename: string): boolean;
 var	f	: FILE;
+	ok	: boolean;
 begin
+        block_save := FALSE;
+        if (blk = nil) or (blk^.data = nil) then exit;
         assign(f, filename);
 	{$I-}
         rewrite(f, 1);
-        {$I+}
-        if ioresult <> 0 then
-        begin
-                block_save := FALSE;
-                exit;
-        end;
+        if ioresult <> 0 then exit;
         blockwrite(f, blk^.w, sizeof(word));
         blockwrite(f, blk^.h, sizeof(word));
         blockwrite(f, blk^.data^, blk^.size);
+        ok := ioresult = 0;	{ also clears the error so close runs }
         close(f);
-        block_save := TRUE;
+        ok := (ioresult = 0) and ok;
+        {$I+}
+        block_save := ok;
 end;
 
 { load a text-based bit block from disk }
 function	block_load(filename: string): PBLOCK;
 var	blk     : PBLOCK;
 	f	: FILE;
-	w, h	: word;
+	w, h,
+	nr	: word;
 begin
+	block_load := nil;
 	assign(f, filename);
         {$I-}
         reset(f, 1);
-        if ioresult <> 0 then
+        if ioresult <> 0 then exit;
+        blk := nil;
+        blockread(f, w, sizeof(word), nr);
+        if nr = sizeof(word) then blockread(f, h, sizeof(word), nr);
+        if (nr = sizeof(word)) and (w > 0) and (h > 0) and
+           (longint(w) * h <= 65528) then
+                blk := block_create(w, h);
+        if blk <> nil then
         begin
-        	block_load := nil;
-                exit;
+                blockread(f, blk^.data^, blk^.size, nr);
+                if nr <> blk^.size then block_destroy(blk);
         end;
-        {$I+}
-        blockread(f, w, sizeof(word));
-        blockread(f, h, sizeof(word));
-        blk := block_create(w, h);
-        if (blk = nil) then
-        begin
-        	dispose(blk);
-	        close(f);
-                block_load := nil;
-                exit;
-        end;
-        blockread(f, blk^.data^, blk^.size);
+        if ioresult <> 0 then block_destroy(blk);
         close(f);
+        if ioresult <> 0 then block_destroy(blk);
+        {$I+}
         block_load := blk;
 end;
 
@@ -1989,6 +2225,8 @@ var	blk	: PBLOCK;
         w, h    : word;
         p	: pchar;
 begin
+	block_attach := nil;
+	if buffer = nil then exit;
 	p := pchar(buffer);
 
         w := word((p+0)^) + word((p+1)^) shl 8;	{ get width }
@@ -1997,17 +2235,17 @@ begin
         h := word((p+0)^) + word((p+1)^) shl 8;	{ get height }
         inc(p, 2);
 
-        blk := block_create(w, h);
-        blk^.attach := TRUE;		{ notice }
-        blk^.data   := p;		{ attach pointer to data }
+        blk := block_new(w, h, FALSE);	{ no buffer: data lives in 'buffer' }
+        if blk <> nil then blk^.data := p;
 	block_attach := blk;
 end;
 
 { map a bitmap into text-based bit block, using singled width }
 procedure	block_mapper(blk: PBLOCK; buf: pchar; c: char);
 var	p, q	: pchar;
-	i	: integer;
+	i	: longint;
 begin
+	if (blk = nil) or (buf = nil) then exit;
 	p := buf;
         q := blk^.data;
         for i := 1 to blk^.size do
@@ -2023,37 +2261,52 @@ end;
 { dump the video RAM onto disk }
 function	screen_dump(filename: string): boolean;
 var	f	: FILE;
+	buf	: array[0..SCR_SIZE-1] of byte;
+	nw	: word;
+	ok	: boolean;
 begin
+	screen_dump := FALSE;
+{$ifndef FPC}
+	move(VIDEO_RAM^, buf, SCR_SIZE);
+{$else}
+	dosmemget(VSEG_ADDR, 0, buf, SCR_SIZE);
+{$endif}
 	assign(f, filename);
 	{$I-}
 	rewrite(f, 1);
+	if ioresult <> 0 then exit;
+	blockwrite(f, buf, SCR_SIZE, nw);
+	ok := (ioresult = 0) and (nw = SCR_SIZE);	{ clears the error so close runs }
+	close(f);
+	ok := (ioresult = 0) and ok;
 	{$I+}
-	if ioresult <> 0 then
-		screen_dump := FALSE
-	else
-	begin
-		blockwrite(f, VIDEO_RAM^, SCR_SIZE);
-		close(f);
-		screen_dump := TRUE;
-	end;
+	screen_dump := ok;
 end;
 
 { load the screen-dump file onto video RAM  }
 function	screen_view(filename: string): boolean;
 var	f	: FILE;
+	buf	: array[0..SCR_SIZE-1] of byte;
+	nr	: word;
+	ok	: boolean;
 begin
+	screen_view := FALSE;
 	assign(f, filename);
 	{$I-}
 	reset(f, 1);
+	if ioresult <> 0 then exit;
+	blockread(f, buf, SCR_SIZE, nr);
+	ok := (ioresult = 0) and (nr = SCR_SIZE);
+	close(f);
 	{$I+}
-	if ioresult <> 0 then
-		screen_view := FALSE
-	else
-	begin
-		blockread(f, VIDEO_RAM^, SCR_SIZE);
-		close(f);
-		screen_view := TRUE;
-	end;
+	ok := (ioresult = 0) and ok;
+	if not ok then exit;
+{$ifndef FPC}
+	move(buf, VIDEO_RAM^, SCR_SIZE);
+{$else}
+	dosmemput(VSEG_ADDR, 0, buf, SCR_SIZE);
+{$endif}
+	screen_view := TRUE;
 end;
 
 { display an error message and terminate the application }

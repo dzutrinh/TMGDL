@@ -228,21 +228,21 @@ type    PCOUNTER = ^COUNTER_TYPE;
 		min, max: longint;
 	end;
 
-function	counterCreate(ival, x, y, w: integer;
+function	counterCreate(ival: longint; x, y, w: integer;
 			      min, max: longint;
 			      shade: SHADING; name: STR80): PCOUNTER;
 procedure	counterDestroy(var cnt: PCOUNTER);
 procedure	counterShow(var cnt: PCOUNTER);
 procedure	counterHide(var cnt: PCOUNTER);
-procedure	counterSetValue(var cnt: PCOUNTER; value: integer);
-function	counterGetValue(var cnt: PCOUNTER): integer;
+procedure	counterSetValue(var cnt: PCOUNTER; value: longint);
+function	counterGetValue(var cnt: PCOUNTER): longint;
 procedure	counterIncrease(var cnt: PCOUNTER);
 procedure	counterDecrease(var cnt: PCOUNTER);
 procedure	counterReset(var cnt: PCOUNTER);
 procedure       counterLimitDecrease(var cnt: PCOUNTER);
 procedure	counterLimitIncrease(var cnt: PCOUNTER);
-procedure	counterAdd(var cnt: PCOUNTER; incr: integer);
-procedure	counterAccum(var cnt: PCOUNTER; value: integer);
+procedure	counterAdd(var cnt: PCOUNTER; incr: longint);
+procedure	counterAccum(var cnt: PCOUNTER; value: longint);
 function	counterLast(var cnt: PCOUNTER): boolean;
 function	counterVisible(cnt: PCOUNTER): boolean;
 
@@ -400,7 +400,9 @@ end;
 
 procedure	labelDestroy(var lb: PLABEL);
 begin
+	if lb = nil then exit;
 	dispose(lb);
+	lb := nil;
 end;
 
 procedure       labelShow(var lb: PLABEL);
@@ -429,9 +431,9 @@ begin
         if lb = nil then exit;
 
 	vis := lb^.show;
-	if not vis then labelHide(lb);
+	if vis then labelHide(lb);
 	lb^.text := text;
-	if lb^.show then labelShow(lb);
+	if vis then labelShow(lb);
 end;
 
 { //////////////////////////// COLOR PICKER API //////////////////////////// }
@@ -484,7 +486,7 @@ begin
         ltx_validate_rect(x, y, w, h);
 
         { k points to the default color if needed }
-        if (default < 0) or (default > 15) then k := 0 else k := default;
+        if (default < 0) or (default >= CPR * CPC) then k := 0 else k := default;
         r := k div CPR;			{ calculate the column and    }
         c := k mod CPR;			{ row indices for selection   }
 
@@ -526,7 +528,9 @@ begin
         { extracts each line into a list }
         lines  := 0;
         mlen   := 0;
-        while (text <> '') and (lines < MAX_DLG_LINE) do
+        { the box needs 8 extra rows for its frame and the version lines }
+        while (text <> '') and (lines < MAX_DLG_LINE) and
+              (lines < SCR_HEIGHT - 8) do
         begin
         	inc(lines);
                 list[lines] := tokenize(text, ENDL);
@@ -535,7 +539,7 @@ begin
         end;
 
         { setting up the dialog }
-        w := ltx_max(mlen + 8, 32);
+        w := ltx_min(ltx_max(mlen + 8, 32), SCR_WIDTH);
         h := lines + 8;
         ltx_validate_rect(x, y, w, h);
 
@@ -683,25 +687,38 @@ var	i, f, s	: longint;
 begin
 	DRIVE_LIST.count := 0;
         for i := 1 to 26 do
+	if drive_valid(i) then
 	begin
-        	f := drive_free(i);
-	        if f >= 0 then
-        	begin
-                	inc(DRIVE_LIST.count);
-                        s := drive_size(i);
-                        DRIVE_LIST.list[DRIVE_LIST.count].drive := chr(i + 64);
-                        DRIVE_LIST.list[DRIVE_LIST.count].free  := f;
-                        DRIVE_LIST.list[DRIVE_LIST.count].size  := s;
-        	end;
+		{ do not query removable drives: an empty one prompts the user }
+		if drive_removable(i) then
+		begin
+			f := -1;
+			s := -1;
+		end
+		else
+		begin
+	        	f := drive_free(i);
+	        	s := drive_size(i);
+		end;
+               	inc(DRIVE_LIST.count);
+                DRIVE_LIST.list[DRIVE_LIST.count].drive := chr(i + 64);
+                DRIVE_LIST.list[DRIVE_LIST.count].free  := f;
+                DRIVE_LIST.list[DRIVE_LIST.count].size  := s;
         end;
+end;
+
+{ size text for the drive list, 'N/A' when unknown }
+function	driveSizeText(v: longint): string;
+begin
+	if v < 0 then driveSizeText := 'N/A' else driveSizeText := unitize(v);
 end;
 
 function	driveGetItemString(i: longint): string;
 begin
 	with DRIVE_LIST do
 	        driveGetItemString := 	'  '+list[i].drive+': '+
-                                	lpad(unitize(list[i].free), 12) + ' '+
-                                        lpad(unitize(list[i].size), 12);
+                                	lpad(driveSizeText(list[i].free), 12) + ' '+
+                                        lpad(driveSizeText(list[i].size), 12);
 end;
 
 function        drivePicker(x, y, norm, hilight: integer; shade: SHADING; title: string): string;
@@ -719,7 +736,6 @@ begin
         if DRIVE_LIST.count = 0 then
         begin
                 info(SHADE_RED, 'NO DRIVE AVAILABLE');
-                listDestroy(lpicker);
                 exit;
         end;
 
@@ -727,16 +743,20 @@ begin
         prints(x + 1, y + 1, shade[SHADE_BRIGHT], '  DISK'+lpad('FREE', 8)+lpad('SIZE', 12));
 
         lpicker := listCreate(LVM_PICK, x + 1, y + 2, w - 1, h-3, norm, hilight, DRIVE_LIST.count);
-	listHandleItem(lpicker, driveGetItemString);
-        ret := listExec(lpicker);
-        listDestroy(lpicker);
+        ret := -1;
+        if lpicker <> nil then
+        begin
+		listHandleItem(lpicker, driveGetItemString);
+	        ret := listExec(lpicker);
+	        listDestroy(lpicker);
+        end;
         dialog_close(dlg);
         if ret <> -1 then drivePicker := DRIVE_LIST.list[ret].drive+':';
 end;
 
 { //////////////////////////// TEXT MARQUEE API //////////////////////////// }
 
-{ run a text marquee until a key is hit }
+{ run a text marquee until a key is hit, 'speed' is milliseconds per step }
 procedure	marqueeText(x, y, w, attr, speed: integer; text: string);
 var	tmp	: string;
 	st, at,
@@ -780,7 +800,7 @@ begin
         scr^.len     := len;
         scr^.min     := min;
         scr^.max     := max;
-        scr^.value   := 0;
+        scr^.value   := min;
         scr^.style   := style;
         scr^.shade   := shade;
 
@@ -793,7 +813,9 @@ end;
 
 procedure	scrollbarDestroy(var scr: PSCROLLBAR);
 begin
+	if scr = nil then exit;
 	dispose(scr);
+	scr := nil;
 end;
 
 procedure	scrollbarSetRange(var scr: PSCROLLBAR; min, max: longint);
@@ -805,6 +827,7 @@ end;
 
 procedure	scrollbarSetValue(var scr: PSCROLLBAR; value: longint);
 begin
+	if scr = nil then exit;
 	if (value >= scr^.min) and (value <= scr^.max) then
 		scr^.value := value;
 end;
@@ -817,7 +840,7 @@ end;
 
 procedure	scrollbarDraw(const scr: PSCROLLBAR);
 var     start, stop, i,
-	fill, d, s, c	: integer;
+	fill, d, s, c	: longint;
 begin
 	fill  := scr^.len - 2;
         s     := scr^.value - scr^.min;
@@ -871,12 +894,8 @@ function	sliderCreate(title: string; frame: boolean;
 			     shades: SHADING): PSLIDER;
 var	sld	: PSLIDER;
 begin
-	if ltx_memavail < sizeof(SLIDER_TYPE) then
-	begin
-		sliderCreate := nil;
-		exit;
-	end;
-	
+	sliderCreate := nil;
+	if ltx_maxavail < sizeof(SLIDER_TYPE) then exit;
 	if (max < 2) then exit;
 
 	len := ltx_max(len, SLIDER_DEFWD);
@@ -984,7 +1003,7 @@ function	menuCreate: PMENU;
 var	i	: byte;
 	m	: PMENU;
 begin
-	if ltx_memavail < sizeof(MENU_TYPE) then
+	if ltx_maxavail < sizeof(MENU_TYPE) then
 	begin
 		menuCreate := nil;
 		exit;
@@ -1005,7 +1024,9 @@ end;
 { destroy a menu object }
 procedure	menuDestroy(var m: PMENU);
 begin
+	if m = nil then exit;
 	dispose(m);
+	m := nil;
 end;
 
 { add a new item into the menu }
@@ -1091,6 +1112,7 @@ var	w, h,
 	var	value	: boolean;
 		i	: byte;
 	begin
+		value := FALSE;
 		for i := 1 to m^.size do
 			value := value or m^.list[i].pop;
 		menu_haspop := value;
@@ -1182,7 +1204,8 @@ begin
 		KEY_ENTER:	begin
 					if m^.list[k].pop then
 					begin
-						id := menuPopup(m^.list[k].sub, shade, x+4, y+k+1, txt, sel, '');
+						if m^.list[k].sub <> nil then
+							id := menuPopup(m^.list[k].sub, shade, x+4, y+k+1, txt, sel, '');
 						if id <> 0 then quit := TRUE;
 					end
 					else
@@ -1225,13 +1248,14 @@ var	mx, my,
 	r	: PREGION;
 	oldscr	: SCREEN;
 
+	{ column offset of item k, relative to mx }
 	function	menu_pos(k: integer): integer;
 	var	i, p	: integer;
 	begin
 		p := 0;
 		for i := 1 to k-1 do
 			inc(p, length(m^.list[i].name));
-		menu_pos := x + p;
+		menu_pos := p;
 	end;
 
 	procedure	menu_item(k: integer; act: boolean);
@@ -1282,7 +1306,10 @@ begin
 		h  := menu_height;
 	end;
 
-	r := region_get(x, y, w, h);
+	{ a menu bar without a title paints the whole row }
+	if title <> '' then
+		r := region_get(x, y, w, h)
+	else	r := region_get(1, y, w, h);
 	menu_table;
 
 	MENU_PULLED     := FALSE;
@@ -1296,7 +1323,7 @@ begin
 
 		if MENU_PULLED and m^.list[k].pop and (m^.list[k].sub <> nil) then
 			sid := menuPopup(m^.list[k].sub, shade,
-					  menu_pos(k), my+1, txt, sel, '');
+					  mx + menu_pos(k), my+1, txt, sel, '');
 		if (sid = 0) and (not MENU_PULL_LEFT) and (not MENU_PULL_RIGHT) then
 			MENU_PULLED := FALSE;
 
@@ -1376,8 +1403,6 @@ begin
 	lf.x	:= x;
 	lf.y	:= y;
 	lf.w	:= w;
-	lf.h	:= row+2;
-	lf.row	:= row;
 	lf.count:= max;
 	lf.max  := max;
 	lf.name := name;
@@ -1385,8 +1410,10 @@ begin
 	lf.syma	:= syma;
 	lf.show := FALSE;
 	lf.shade:= shade;
-	lf.lpr  := max div row;
-	if odd(max) then inc(lf.lpr);
+	if row < 1 then row := 1;
+	lf.h	:= row+2;
+	lf.row	:= row;
+	lf.lpr  := (max + row - 1) div row;	{ lives per row, rounded up }
 	if lf.w < lf.lpr + 4 then lf.w := lf.lpr + 4;
 end;
 
@@ -1464,12 +1491,12 @@ end;
 
 { ///////////////////////////// COUNTER-BOX API //////////////////////////// }
 
-function	counterCreate(ival, x, y, w: integer; min, max: longint;
+function	counterCreate(ival: longint; x, y, w: integer; min, max: longint;
 			      shade: SHADING; name: STR80): PCOUNTER;
 var     cnt	: PCOUNTER;
 	tlen	: integer;
 begin
-	if ltx_memavail < sizeof(COUNTER_TYPE) then
+	if ltx_maxavail < sizeof(COUNTER_TYPE) then
 	begin
 		counterCreate := nil;
 		exit;
@@ -1496,7 +1523,9 @@ end;
 
 procedure	counterDestroy(var cnt: PCOUNTER);
 begin
+	if cnt = nil then exit;
 	dispose(cnt);
+	cnt := nil;
 end;
 
 procedure	counterShow(var cnt: PCOUNTER);
@@ -1536,7 +1565,7 @@ begin
 	end;
 end;
 
-procedure	counterSetValue(var cnt: PCOUNTER; value: integer);
+procedure	counterSetValue(var cnt: PCOUNTER; value: longint);
 var	vis	: boolean;
 begin
 	vis := cnt^.show;
@@ -1545,7 +1574,7 @@ begin
 	if vis then counterShowValue(cnt);
 end;
 
-function	counterGetValue(var cnt: PCOUNTER): integer;
+function	counterGetValue(var cnt: PCOUNTER): longint;
 begin
 	counterGetValue := cnt^.value;
 end;
@@ -1575,13 +1604,13 @@ begin
 	if cnt^.value < cnt^.max then counterIncrease(cnt);
 end;
 
-procedure	counterAccum(var cnt: PCOUNTER; value: integer);
+procedure	counterAccum(var cnt: PCOUNTER; value: longint);
 begin
 	counterSetValue(cnt, cnt^.value + value);
 end;
 
-procedure	counterAdd(var cnt: PCOUNTER; incr: integer);
-var	tmp	: integer;
+procedure	counterAdd(var cnt: PCOUNTER; incr: longint);
+var	tmp	: longint;
 begin
 	tmp := cnt^.value + incr;
 	if (tmp >= cnt^.min) and (tmp <= cnt^.max) then
@@ -1605,7 +1634,7 @@ var	hb	: PHELPBOX;
 	s	: HELPSTR;
 	f	: TEXT;
 begin
-	if ltx_memavail < sizeof(HELPBOX_TYPE) then
+	if ltx_maxavail < sizeof(HELPBOX_TYPE) then
 	begin
 		helpboxCreate := nil;
 		exit;
@@ -1626,11 +1655,12 @@ begin
 	{$I+}
 	if ioresult <> 0 then
 	begin
+		dispose(hb);
 		helpboxCreate := nil;
 		exit;
 	end;
 
-	while not eof(f) do
+	while not eof(f) and (hb^.lines < HELPTEXT_MAX) do
 	begin
 		readln(f, s);
 		while text_length(s) > HELPTEXT_LEN do
@@ -1671,13 +1701,13 @@ begin
 
         changed:= TRUE;
 	done   := FALSE;
-	rows   := hb^.lines - HELPCLNT_H + 1;
-        if rows < 0 then rows := hb^.lines;
+	rows   := hb^.lines - HELPCLNT_H + 1;	{ number of scroll positions }
+        if rows < 1 then rows := 1;
 	k      := 1;
         dlg    := dialog_open(hb^.x, hb^.y, HELPWIND_W, HELPWIND_H, SHADE_WHITE, hb^.title, '');
         scroll := scrollbarCreate(SCS_VERT, SHADE_WHITE,
 				  hb^.x + HELPWIND_W - 2, hb^.y + 1, HELPCLNT_H,
-				  0, rows);
+				  1, rows);
         {draw(k);
         scrollbarDraw(scroll);}
 	repeat
@@ -1704,7 +1734,7 @@ begin
                                         changed := TRUE;
                 		end;
 		KEY_END:	begin
-					k := rows-1;
+					k := rows;
                                         changed := TRUE;
                 		end;
 		KEY_PGDN:	begin
@@ -1725,7 +1755,9 @@ end;
 
 procedure       helpboxDestroy(var hb: PHELPBOX);
 begin
+	if hb = nil then exit;
 	dispose(hb);
+	hb := nil;
 end;
 
 { //////////////////////////////// GAUGE API /////////////////////////////// }
@@ -1738,7 +1770,7 @@ end;
 function	gaugeCreate(ival, x, y, w, min, max, style: longint; shadef, shadeg: SHADING; title: string): PGAUGE;
 var	gg	: PGAUGE;
 begin
-        if ltx_memavail < sizeof(GAUGE_TYPE) then
+        if ltx_maxavail < sizeof(GAUGE_TYPE) then
         begin
                 gaugeCreate := nil;
                 exit;
@@ -1786,39 +1818,44 @@ end;
 
 procedure	gaugeDestroy(var gg: PGAUGE);
 begin
+        if gg = nil then exit;
         with gg^ do
         	ltx_fillw(x, y, w, h, ltx_makew(#0, CLEAR_COLOR shl 4));
         dispose(gg);
+        gg := nil;
 end;
 
 procedure	gaugeDraw(var gg: PGAUGE);
-var	i, k, ip,
-	clr	: longint;
-        c	: char;
+var	i, full	: longint;
+
+	{ gauge colour for the cell at position i }
+	function	cell_color(i: longint): byte;
+	begin
+		if i < gg^.r_low then cell_color := gg^.shadeg[SHADE_DARK]
+		else	if i <= gg^.r_hi then cell_color := gg^.shadeg[SHADE_MEDIUM]
+		else	cell_color := gg^.shadeg[SHADE_BRIGHT];
+	end;
+
 begin
 	with gg^ do
         begin
-	        pct := (1.0 * cval - min) / diff * gw;
-                ip  := round(pct);
-                k   := 0;
-	        clr := shadeg[SHADE_DARK];
-		prints(gx+ip, gy, shadef[SHADE_DARK], repl(GLC_CHARSET[3], gw-ip));
-	        for i := 0 to ip-1 do
-        	begin
-        		if i < r_low then clr := shadeg[SHADE_DARK]
-			else	if (i >= r_low) and (i <= r_hi) then
-				clr := shadeg[SHADE_MEDIUM]
-			else	clr := shadeg[SHADE_BRIGHT];
-	                printc(gx+i, gy, clr, GLC_CHARSET[1]);
-                        k := i;
-        	end;
-	        if (pct > 0) and (pct < gw) then
-        	begin
-        		if (pct-i <= 0.8) then
-				c := GLC_CHARSET[2]
-			else	c := GLC_CHARSET[1];
-		       	printc(gx+k, gy, clr, c);
-        	end;
+        	if gw < 1 then exit;
+        	if diff <= 0 then
+        		pct := gw		{ empty range: treat as full }
+        	else	pct := (1.0 * cval - min) / diff * gw;
+                full := trunc(pct);
+	        for i := 0 to full-1 do
+	                printc(gx+i, gy, cell_color(i), GLC_CHARSET[1]);
+	        if full < gw then
+	        begin
+	        	{ a half block when at least half of the next cell is filled }
+	        	if pct - full >= 0.5 then
+	        	begin
+	        		printc(gx+full, gy, cell_color(full), GLC_CHARSET[2]);
+	        		inc(full);
+	        	end;
+			prints(gx+full, gy, shadef[SHADE_DARK], repl(GLC_CHARSET[3], gw-full));
+	        end;
                 pct := pct / gw * 100;
         	if gaugeStyle(style, GSF_HAS_PERCENT) then
                 begin
@@ -1893,7 +1930,7 @@ function	listCreate(mode: LISTBOX_MODE; x, y, w, h, nrm, sel, count: integer): P
 var	lv	: PLISTBOX;
 begin
 	listCreate := nil;
-        if ltx_memavail < sizeof(LISTBOX_TYPE) then exit;
+        if ltx_maxavail < sizeof(LISTBOX_TYPE) then exit;
         if (w = 0) or (h = 0) then exit;
 
         ltx_validate_rect(x, y, w, h);
@@ -1922,7 +1959,9 @@ end;
 
 procedure	listDestroy(var lv: PLISTBOX);
 begin
+        if lv = nil then exit;
         dispose(lv);
+        lv := nil;
 end;
 
 function	listCurrent(const lv: PLISTBOX): longint;
@@ -2012,22 +2051,20 @@ begin
         end
         else
         begin
-                prints(1, 1, $0E, itoa(lv^.count)+'-'+itoa(lv^.h)+'='+itoa(lv^.range));
-                prints(1, 2, $0A, lpad(itoa(lv^.citem), 4));
                 case key of
-                KEY_DOWN:       if (lv^.citem <= lv^.range) then inc(lv^.citem);
+                KEY_DOWN:       if (lv^.citem < lv^.range) then inc(lv^.citem);
                 KEY_UP:		if lv^.citem > 1 then dec(lv^.citem);
                 KEY_HOME:	lv^.citem := 1;
-                KEY_END:	lv^.citem := lv^.range;
+                KEY_END:	lv^.citem := ltx_max(lv^.range, 1);
                 KEY_PGUP:	begin
                 			if lv^.citem > 1 then
                                         	dec(lv^.citem, lv^.h);
                                         if lv^.citem < 1 then lv^.citem := 1;
 				end;
                 KEY_PGDN:	begin
-					if lv^.citem <= lv^.range then
-						inc(lv^.citem, lv^.h);
-					if lv^.citem > lv^.range then lv^.citem := lv^.range;
+					inc(lv^.citem, lv^.h);
+					if lv^.citem > lv^.range then
+						lv^.citem := ltx_max(lv^.range, 1);
                 		end;
                 end;
         	lv^.chd(lv);
@@ -2060,8 +2097,12 @@ begin
         else
         begin
         	for i := 1 to lv^.h do
-			prints(	lv^.x, lv^.y+i-1, lv^.norm,
-				rpad(lv^.chi(lv^.citem+i-1), lv^.w-1));
+        	begin
+        		if lv^.citem+i-1 <= lv^.count then
+				text := rpad(lv^.chi(lv^.citem+i-1), lv^.w-1)
+			else	text := rpad(' ', lv^.w-1);
+			prints(	lv^.x, lv^.y+i-1, lv^.norm, text);
+		end;
         end;
 end;
 
@@ -2083,7 +2124,7 @@ begin
         until done;
         scrollbarDestroy(scrl);
 
-        if (lv^.mode = LVM_PICK) and (key = KEY_ENTER) then
+        if (lv^.mode = LVM_PICK) and (key = KEY_ENTER) and (lv^.count > 0) then
         	listExec := lv^.citem
         else	listExec := -1;
 end;
@@ -2093,7 +2134,8 @@ end;
 function	logviewCreate(x, y, w, h, attr: integer): PLOGVIEW;
 var	log	: PLOGVIEW;
 begin
-        if (h = 0) or (w = 0) then exit;
+        logviewCreate := nil;
+        if (h <= 0) or (w <= 0) then exit;
         w := ltx_min(w, SCR_WIDTH);
         h := ltx_min(h, MAX_DLG_LINE);
         ltx_validate_rect(x, y, w, h);

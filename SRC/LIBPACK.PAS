@@ -12,13 +12,14 @@ const   PKGFILE_MAX	= 1024;
 type	PKGFILE_SIGNATURE = array[0..3] of char;
         PKGFILE_BUFFER  = array[1..PKGFILE_BUFSIZE] of byte;
 
-type	PKGFILE_ENTRY	= record	{ a file table entry, consists of }
+{ on-disk records are packed so every compiler writes the same layout }
+type	PKGFILE_ENTRY	= packed record	{ a file table entry, consists of }
 		name	: string[12];	{ file name }
                 size	: longint;	{ its size in bytes }
                 offset	: longint;	{ offset inside package file }
 	end;
 
-        PKGFILE_HEADER = record
+        PKGFILE_HEADER = packed record
         	magic	: PKGFILE_SIGNATURE;
                 count   : word;
                 crc32	: CRC32_TYPE;
@@ -59,6 +60,7 @@ function        package_extract(var pkg: PACKAGE;
 			        filename, destdir: string): boolean;
 function        package_verify(const pkg: PACKAGE): CRC32_TYPE;
 function	package_checksum(const pkg: PACKAGE): CRC32_TYPE;
+function	package_aborted: boolean;
 
 { package file clean up }
 procedure	package_shutdown(var pkg: PACKAGE);
@@ -77,10 +79,26 @@ const   CALLBACK_FILE	: PKGFILE_CB_FILE = nil;
 
 	PKGFILE_MAGIC	: PKGFILE_SIGNATURE = 'PACK';
 
+	{ set when the user cancelled the last package_pack/package_verify }
+	PKGFILE_ABORTED	: boolean = FALSE;
+
+
+{ an entry name may not leave the destination folder or name a device }
+function	package_safe_name(const name: string): boolean;
+var	i	: integer;
+begin
+	package_safe_name := FALSE;
+	if (name = '') or (name = '.') or (name = '..') then exit;
+	for i := 1 to length(name) do
+		if name[i] in ['\', '/', ':', #0..#31] then exit;
+	package_safe_name := TRUE;
+end;
 
 function        package_init: PACKAGE;
 var	pkg	: PACKAGE;
 begin
+	package_init := nil;
+	if ltx_maxavail < sizeof(PKGFILE_TABLE) then exit;
 	new(pkg);
 
         with pkg^ do
@@ -104,14 +122,12 @@ begin
         assign(f, filename);
         {$I-}
         reset(f, 1);
-        {$I-}
-        if ioresult <> 0 then exit;
         {$I+}
+        if ioresult <> 0 then exit;
         blockread(f, sig, sizeof(PKGFILE_SIGNATURE), nr);
         if (nr <> sizeof(PKGFILE_SIGNATURE)) or (sig <> PKGFILE_MAGIC) then
                 package_valid := FALSE
         else	package_valid := TRUE;
-        {$I+}
         close(f);
 end;
 
@@ -123,6 +139,7 @@ var	pkg	: PACKAGE;
 begin
 	package_open := nil;
 
+	if ltx_maxavail < sizeof(PKGFILE_TABLE) then exit;
 	new(pkg);
 	pkg^.mode := PFM_OPEN;
 	assign(pkg^.handle, filename);
@@ -152,14 +169,13 @@ begin
                 dispose(pkg);
                 exit;
         end;
-        if ltx_memavail < pkg^.size then
+        pkg^.list := ltx_malloc(pkg^.size);
+        if pkg^.list = nil then
         begin
         	close(pkg^.handle);
                 dispose(pkg);
                 exit;
         end;
-
-        pkg^.list := ltx_malloc(pkg^.size);
         for i := 1 to pkg^.hdr.count do
         begin
         	blockread(pkg^.handle, pkg^.list^[i], sizeof(PKGFILE_ENTRY), nr);
@@ -170,7 +186,8 @@ begin
                         dispose(pkg);
                         exit;
                 end;
-                if (pkg^.list^[i].size < 0) or
+                if not package_safe_name(pkg^.list^[i].name) or
+                   (pkg^.list^[i].size < 0) or
                    (pkg^.list^[i].offset < sizeof(PKGFILE_HEADER) + pkg^.size) or
                    (pkg^.list^[i].offset > fsize) or
                    (pkg^.list^[i].size > fsize - pkg^.list^[i].offset) then
@@ -199,31 +216,23 @@ begin
 end;
 
 function	package_add(var pkg: PACKAGE; filename: string): boolean;
-var	f	: FILE;
-	size	: longint;
+var	size	: longint;
 begin
 	package_add := FALSE;
 	if (pkg = nil) then exit;
         if (pkg^.mode = PFM_OPEN) then exit;
-	if not file_exist(filename) then exit;
         if length(filename) > 12 then exit;
+        if not package_safe_name(filename) then exit;
+	if (pkg^.hdr.count >= PKGFILE_MAX) then exit;	{ table full }
 
-	if (pkg^.hdr.count < PKGFILE_MAX) then
-        begin
-        	assign(f, filename);
-                {$I-}
-                reset(f, 1);
-                {$I+}
-                if ioresult <> 0 then exit;
-		size := filesize(f);
-                close(f);
+	size := file_size(filename);
+	if size < 0 then exit;
 
-        	inc(pkg^.hdr.count);
-                pkg^.table[pkg^.hdr.count].name := filename;
-                pkg^.table[pkg^.hdr.count].size := size;
-                pkg^.table[pkg^.hdr.count].offset := 0;
-        	package_callback_file(pkg^.table[pkg^.hdr.count]);
-        end;
+	inc(pkg^.hdr.count);
+	pkg^.table[pkg^.hdr.count].name := filename;
+	pkg^.table[pkg^.hdr.count].size := size;
+	pkg^.table[pkg^.hdr.count].offset := 0;
+	package_callback_file(pkg^.table[pkg^.hdr.count]);
 
         package_add := TRUE;
 end;
@@ -231,99 +240,113 @@ end;
 function	package_pack(var pkg: PACKAGE; pkgname: string): boolean;
 var	i	: integer;
 	csize,
-	total,
+	remain,
 	lastoffs: longint;
         fi, fo	: FILE;
         buffer	: PKGFILE_BUFFER;
-        nr, nw	: word;
-        abort	: boolean;
+        nr, nw,
+        chunk	: word;
+        abort,
+        opened,
+        ok	: boolean;
 begin
 	package_pack := FALSE;
+	PKGFILE_ABORTED := FALSE;
 	if (pkg = nil) then exit;
         if (pkg^.hdr.count = 0) or (pkg^.mode = PFM_OPEN) then exit;
 
-        total    := sizeof(PKGFILE_HEADER) +
+        { files may have changed since package_add: size them again so the }
+        { table written below matches the data that follows it             }
+        lastoffs := sizeof(PKGFILE_HEADER) +
 	            sizeof(PKGFILE_ENTRY) * pkg^.hdr.count;
-        lastoffs := total;
-
         with pkg^ do for i := 1 to hdr.count do
         begin
+                table[i].size := file_size(table[i].name);
+                if table[i].size < 0 then exit;
                 table[i].offset := lastoffs;
                 inc(lastoffs, table[i].size);
         end;
+        pkg^.hdr.crc32 := crc32_init;
 
-        { write header }
         assign(fo, pkgname);
         {$I-}
         rewrite(fo, 1);
-        {$I+}
         if ioresult <> 0 then exit;
 
-        { write header }
+        { header (checksum is filled in at the end) and file table }
         blockwrite(fo, pkg^.hdr, sizeof(PKGFILE_HEADER), nw);
-        if nw <> sizeof(PKGFILE_HEADER) then
-        begin
-                close(fo);
-                erase(fo);
-                exit;
-        end;
-
-        { write partial file table }
-	for i := 1 to pkg^.hdr.count do
+        ok := (ioresult = 0) and (nw = sizeof(PKGFILE_HEADER));
+        i := 1;
+	while ok and (i <= pkg^.hdr.count) do
         begin
         	blockwrite(fo, pkg^.table[i], sizeof(PKGFILE_ENTRY), nw);
-		if nw <> sizeof(PKGFILE_ENTRY) then
-	        begin
-        	        close(fo);
-			erase(fo);
-	                exit;
-	        end;
+        	ok := (ioresult = 0) and (nw = sizeof(PKGFILE_ENTRY));
+        	inc(i);
 	end;
 
-        { start packing }
+        { file data }
         abort := FALSE;
-	with pkg^ do for i := 1 to hdr.count do
+        i := 1;
+	while ok and not abort and (i <= pkg^.hdr.count) do
+	with pkg^ do
         begin
                 package_callback_file(table[i]);
         	assign(fi, table[i].name);
                 reset(fi, 1);
+                opened := ioresult = 0;
+                ok := opened;
 
                 csize := 0;
-                repeat
-                	blockread(fi, buffer, sizeof(buffer), nr);
-                        hdr.crc32 := crc32_block(hdr.crc32, buffer, nr);
-
-                        blockwrite(fo, buffer, nr, nw);
-                        inc(csize, nw);
+                while ok and not abort and (csize < table[i].size) do
+                begin
+                	remain := table[i].size - csize;
+                	if remain > sizeof(buffer) then
+                		chunk := sizeof(buffer)
+                	else	chunk := remain;
+                	blockread(fi, buffer, chunk, nr);
+                	ok := (ioresult = 0) and (nr = chunk);	{ fails if the file shrank }
+                	if ok then
+                	begin
+	                        hdr.crc32 := crc32_block(hdr.crc32, buffer, nr);
+	                        blockwrite(fo, buffer, nr, nw);
+	                        ok := (ioresult = 0) and (nw = nr);
+	                        inc(csize, nw);
+                	end;
 
                         if keypressed then if getkey = KEY_ESC then
                                 abort := TRUE;
 
 	                package_callback_disk(csize, table[i].size);
-                until (nr = 0) or abort;
-                close(fi);
-
-                if abort then break;
-
-                inc(total, table[i].size);
+                end;
+                if opened then
+                begin
+	                close(fi);
+	                if ioresult <> 0 then ;		{ read-only, nothing lost }
+                end;
+                inc(i);
         end;
-        pkg^.hdr.crc32 := crc32_final(pkg^.hdr.crc32);
 
-        seek(fo, 0);
-        { write full header with checksum }
-        blockwrite(fo, pkg^.hdr, sizeof(PKGFILE_HEADER), nw);
-        if nw <> sizeof(PKGFILE_HEADER) then
+        { rewrite the header with the final checksum }
+        if ok and not abort then
         begin
-                close(fo);
-                erase(fo);
-                exit;
+	        pkg^.hdr.crc32 := crc32_final(pkg^.hdr.crc32);
+	        seek(fo, 0);
+	        blockwrite(fo, pkg^.hdr, sizeof(PKGFILE_HEADER), nw);
+	        ok := (ioresult = 0) and (nw = sizeof(PKGFILE_HEADER));
         end;
 
 	flushkeys;
         close(fo);
+        ok := (ioresult = 0) and ok;
+        if abort or not ok then
+        begin
+        	erase(fo);
+        	if ioresult <> 0 then ;
+        end;
+        {$I+}
 
-        if abort then erase(fo);
-        package_pack := not abort;
+        PKGFILE_ABORTED := abort;
+        package_pack := ok and not abort;
 end;
 
 function	package_lookup(const pkg: PACKAGE; filename: string): longint;
@@ -339,7 +362,7 @@ begin
         index := 0;
         while (i <= pkg^.hdr.count) and not found do
         begin
-        	if filename = pkg^.list^[i].name then
+        	if toupper(filename) = toupper(pkg^.list^[i].name) then
                 begin
                 	found := TRUE;
                         index := i;
@@ -366,71 +389,66 @@ end;
 function        package_extract(var pkg: PACKAGE; filename, destdir: string): boolean;
 var	fo	: FILE;
 	buffer	: PKGFILE_BUFFER;
-        i, idx	: longint;
-        nr, nw	: word;
+        idx	: longint;
+        nr, nw,
+        chunk	: word;
         csize,
-        blocks,
-        remain	: longint;
+        total	: longint;
+        ok	: boolean;
 begin
 	package_extract := FALSE;
-        if (pkg = nil) or (filename = '') then exit;
+        if (pkg = nil) then exit;
         if pkg^.mode = PFM_CREATE then exit;
-	if (pos('\\', filename) <> 0) or (pos('/', filename) <> 0) or
-	   (filename = '.') or (filename = '..') then exit;
+	if not package_safe_name(filename) then exit;
 
         idx := package_lookup(pkg, filename);
         if idx = 0 then exit;
 
         destdir := path_norm(destdir);
-        assign(fo, destdir+'\'+filename);
+        assign(fo, path_join(destdir, filename));
         {$I-}
         rewrite(fo, 1);
-        {$I+}
         if ioresult <> 0 then exit;
 
 {$ifdef __DEBUG__}
         writeln('Extracting file ', filename, ' to ', destdir, '...');
 {$endif}
 
-        blocks := pkg^.list^[idx].size div PKGFILE_BUFSIZE;
-        remain := pkg^.list^[idx].size mod PKGFILE_BUFSIZE;
-        csize  := 0;
+        total := pkg^.list^[idx].size;
+        csize := 0;
         seek(pkg^.handle, pkg^.list^[idx].offset);
-        for i := 1 to blocks do
+        ok := ioresult = 0;
+        while ok and (csize < total) do
         begin
-        	blockread(pkg^.handle, buffer, PKGFILE_BUFSIZE, nr);
-                blockwrite(fo, buffer, nr, nw);
-                if (nr <> PKGFILE_BUFSIZE) or (nw <> nr) then
-                begin
-{$ifdef __DEBUG__}
-			writeln('Error writing block #', i, ' at ', i * PKGFILE_BUFSIZE, ' bytes');
-{$endif}
-                        close(fo);
-                        erase(fo);
-                        exit;
-                end;
-                inc(csize, nr);
-                package_callback_disk(csize, pkg^.list^[idx].size);
-        end;
-        if remain <> 0 then
-        begin
-        	blockread(pkg^.handle, buffer, remain, nr);
-                blockwrite(fo, buffer, nr, nw);
-                if (nr <> remain) or (nw <> nr) then
-                begin
-{$ifdef __DEBUG__}
-			writeln('Error writing remaining ', remain, ' bytes');
-{$endif}
-                        close(fo);
-                        erase(fo);
-                        exit;
-                end;
-                inc(csize, nr);
-                package_callback_disk(csize, pkg^.list^[idx].size);
+        	if total - csize > PKGFILE_BUFSIZE then
+        		chunk := PKGFILE_BUFSIZE
+        	else	chunk := total - csize;
+        	blockread(pkg^.handle, buffer, chunk, nr);
+        	ok := (ioresult = 0) and (nr = chunk);
+        	if ok then
+        	begin
+	                blockwrite(fo, buffer, nr, nw);
+	                ok := (ioresult = 0) and (nw = nr);
+        	end;
+        	if ok then
+        	begin
+	                inc(csize, nr);
+	                package_callback_disk(csize, total);
+        	end;
         end;
         close(fo);
+        ok := (ioresult = 0) and ok;
+        if not ok then
+        begin
+{$ifdef __DEBUG__}
+		writeln('Error extracting ', filename, ' at ', csize, ' bytes');
+{$endif}
+        	erase(fo);
+        	if ioresult <> 0 then ;
+        end;
+        {$I+}
 
-        package_extract := TRUE;
+        package_extract := ok;
 end;
 
 function        package_verify(const pkg: PACKAGE): CRC32_TYPE;
@@ -461,6 +479,7 @@ begin
         until (nr = 0) or abort;
         sum := crc32_final(sum);
 
+        PKGFILE_ABORTED := abort;
         if abort then sum := 0;
 	package_verify := sum;
 end;
@@ -475,7 +494,15 @@ end;
 
 function	package_checksum(const pkg: PACKAGE): CRC32_TYPE;
 begin
+	package_checksum := 0;
+	if pkg = nil then exit;
 	package_checksum := pkg^.hdr.crc32;
+end;
+
+{ TRUE if the last package_pack or package_verify was cancelled with ESC }
+function	package_aborted: boolean;
+begin
+	package_aborted := PKGFILE_ABORTED;
 end;
 
 procedure	package_callback_file(const entry: PKGFILE_ENTRY);

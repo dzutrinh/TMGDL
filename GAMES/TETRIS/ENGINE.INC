@@ -390,6 +390,12 @@ begin
 	end;
 end;
 
+{ empty high-score slots are shown as '-' }
+function	scoreText(score: longint): string;
+begin
+	if score = 0 then scoreText := '-' else scoreText := ltoa(score);
+end;
+
 procedure	scoreShow(x, y: integer);
 var	i	: integer;
 begin
@@ -398,7 +404,7 @@ begin
 		print(x, y+i,
 		      '~01' + itoa(i) + ' ~09' +
 		      rpad(GAME_CONFIG.scores[i].name, 8) + ' ~0B' +
-		      lpad(ltoa(GAME_CONFIG.scores[i].score), 8));
+		      lpad(scoreText(GAME_CONFIG.scores[i].score), 8));
 	end;
 end;
 

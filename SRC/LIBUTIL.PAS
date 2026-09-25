@@ -65,14 +65,15 @@ type    PATH_TOKEN_STACK = ^PATH_TOKEN_STACK_TYPE;
                 top	: integer;
 	end;
 
-var     { BIOS timer ticks for INT 1AH }
-	ticks		: longint absolute $0040:$006C;
-
 type
 {$ifdef	__TMT__}
 	CRC32_TYPE = dword;
 {$else}
+{$ifdef	FPC}
+	CRC32_TYPE = longword;
+{$else}
 	CRC32_TYPE = longint;
+{$endif}
 {$endif}
 
 { ///////////////////////////// UTILITIES API ////////////////////////////// }
@@ -100,6 +101,7 @@ function        path_folder(filename: string): string;
 function        path_basename(filename: string): string;
 function        path_filename(filename: string): string;
 function        path_extension(filename: string): string;
+function	path_join(dirname, filename: string): string;
 
 function	match_wildcard(n1, n2: string): boolean;
 
@@ -112,6 +114,7 @@ function	folder_exist(dirname: string): boolean;
 function        drive_free(drv: byte): longint;
 function        drive_size(drv: byte): longint;
 function	drive_valid(drv: byte): boolean;
+function	drive_removable(drv: byte): boolean;
 
 function	file_size(filename: string): longint;
 function	file_exist(filename: string): boolean;
@@ -324,7 +327,7 @@ end;
 function	path_norm(dirname: string): string;
 begin
 	if length(dirname) > 3 then
-		if dirname[length(dirname)] = '\\' then dec(dirname[0]);
+		if dirname[length(dirname)] = '\' then dec(dirname[0]);
         path_norm := dirname;
 end;
 
@@ -335,7 +338,7 @@ begin
 	if length(dirname) = 3 then
 		if (upcase(dirname[1]) in ['A'..'Z']) and
 		   (dirname[2] = ':') and
-		   (dirname[3] = '\\') then
+		   (dirname[3] = '\') then
 			path_root := TRUE;
 end;
 
@@ -352,7 +355,7 @@ var	first_f	: boolean;
         ps	: PATH_TOKEN_STACK;
 begin
 	path_shorten := path;
-	if length(path) < width then exit;
+	if length(path) <= width then exit;
         if width <= 3 then
 	begin
 		path_shorten := STR_ELLIPSIS;
@@ -460,6 +463,16 @@ begin
         path_extension := es;
 end;
 
+{ append a file name to a folder, adding a separator only when needed }
+function	path_join(dirname, filename: string): string;
+begin
+	if dirname = '' then
+		path_join := filename
+	else	if dirname[length(dirname)] in ['\', ':'] then
+		path_join := dirname + filename
+	else	path_join := dirname + FOLDER_SEPARATOR + filename;
+end;
+
 { wildcard matching }
 function	match_wildcard(n1, n2: string): boolean;
 var	p1, p2	: integer;
@@ -557,6 +570,7 @@ var	i, start,
 begin
 	folder_create := FALSE;
         if dirname = '' then exit;
+        ret := FALSE;
 
 	dirname := path_norm(dirname);
         ps	:= path_tokenizer(dirname);
@@ -621,11 +635,10 @@ begin
         folder_change(old);
 end;
 
-{ get disk free space }
-function        drive_free(drv: byte): longint;
-var
-	a, b, c	: word;
-        size	: longint;
+{ INT 21h/36h: sectors per cluster, free clusters, bytes per sector and }
+{ total clusters; FALSE for an invalid drive                           }
+function        drive_info(drv: byte; var spc, free, bps, total: word): boolean;
+var	a, b, c, d	: word;
 begin
 	asm
 		mov	ah, $36
@@ -635,67 +648,119 @@ begin
                 mov	a, ax
                 mov	b, bx
                 mov	c, cx
-        end;
-
-	if a = $FFFF then
-		size := -1
-	else	size := longint(a) * b * c;
-        drive_free := size;
+                mov	d, dx
+        end {$ifdef FPC}['EAX','EBX','ECX','EDX']{$endif};
+        spc   := a;
+        free  := b;
+        bps   := c;
+        total := d;
+        drive_info := a <> $FFFF;
 end;
 
-{ get disk capacity }
+{ clusters * bytes per cluster, saturated at maxlongint (disks > 2GB) }
+function	drive_bytes(clusters, spc, bps: word): longint;
+var	bpc	: longint;
+begin
+	bpc := longint(spc) * bps;
+	if bpc = 0 then
+		drive_bytes := 0
+	else	if clusters > maxlongint div bpc then
+		drive_bytes := maxlongint
+	else	drive_bytes := bpc * clusters;
+end;
+
+{ get disk free space, -1 for an invalid drive }
+function        drive_free(drv: byte): longint;
+var	spc, free, bps, total	: word;
+begin
+	if drive_info(drv, spc, free, bps, total) then
+		drive_free := drive_bytes(free, spc, bps)
+	else	drive_free := -1;
+end;
+
+{ get disk capacity, -1 for an invalid drive }
 function        drive_size(drv: byte): longint;
-var	a, c, d	: word;
-        size	: longint;
+var	spc, free, bps, total	: word;
+begin
+	if drive_info(drv, spc, free, bps, total) then
+		drive_size := drive_bytes(total, spc, bps)
+	else	drive_size := -1;
+end;
+
+{ INT 21h IOCTL on a drive (1 = A:); none of these touch the media }
+function	drive_ioctl(func: word; drv: byte; var res: word): boolean;
+var	r, cf	: word;
 begin
 	asm
-		mov	ah, $36
-                mov	dl, drv
-                int	$21
-
-                mov	a, ax
-                mov	c, cx
-                mov	d, dx
-        end;
-
-	if a = $FFFF then
-		size := -1
-	else	size := longint(a) * c * d;
-        drive_size := size;
+		mov	ax, func
+		mov	bl, drv
+		int	$21
+		mov	r, ax
+		sbb	ax, ax			{ ax = $FFFF when carry is set }
+		mov	cf, ax
+	end {$ifdef FPC}['EAX','EBX','ECX','EDX']{$endif};
+	res := r;
+	drive_ioctl := cf = 0;
 end;
 
-{ check if a drive is valid }
+{ check if a drive letter exists, without accessing its media; phantom }
+{ letters (B: mapped onto a single floppy drive A:) are not valid      }
 function	drive_valid(drv: byte): boolean;
+var	r	: word;
 begin
-	drive_valid := drive_free(drv) > 0;
+	drive_valid := FALSE;
+	if (drv < 1) or (drv > 26) then exit;
+	{ 4408h: removable query; error 0Fh means no such drive, other }
+	{ errors (network, CD-ROM) still mean the drive exists          }
+	if not drive_ioctl($4408, drv, r) and (r = $0F) then exit;
+	{ 440Eh: AL = letter currently mapped to this physical drive }
+	if drive_ioctl($440E, drv, r) and (lo(r) <> 0) and (lo(r) <> drv) then exit;
+	drive_valid := TRUE;
+end;
+
+{ TRUE for floppy-like drives whose media may be missing }
+function	drive_removable(drv: byte): boolean;
+var	r	: word;
+begin
+	drive_removable := drive_ioctl($4408, drv, r) and (r = 0);
 end;
 
 { return the file size in bytes }
 function	file_size(filename: string): longint;
 var	f	: FILE;
-	size	: longint;
+	oldmode	: longint;
 begin
-	{$I-}
+	file_size := -1;
+	if filename = '' then exit;
 	assign(f, filename);
+	oldmode  := filemode;
 	filemode := 0;
+	{$I-}
 	reset(f, 1);
-        if ioresult <> 0 then size := -1 else size := filesize(f);
-	close(f);
 	{$I+}
-	file_size := size;
+	filemode := oldmode;
+	if ioresult <> 0 then exit;
+	file_size := filesize(f);
+	close(f);
 end;
 
 { check for the existing file }
 function	file_exist(filename: string): boolean;
 var	f	: FILE;
+	oldmode	: longint;
 begin
-	{$I-}
+	file_exist := FALSE;
+	if filename = '' then exit;
 	assign(f, filename);
+	oldmode  := filemode;
 	filemode := 0;
-	reset(f);
-	close(f);
+	{$I-}
+	reset(f, 1);
 	{$I+}
-	file_exist := (ioresult = 0) and (filename <> '');
+	filemode := oldmode;
+	if ioresult <> 0 then exit;
+	close(f);
+	file_exist := TRUE;
 end;
 
 { delete a file using given file name }
@@ -785,7 +850,7 @@ function        text_open(filename: string): TEXT_FILE;
 var	tf	: TEXT_FILE;
 begin
 	text_open := nil;
-        if ltx_memavail < sizeof(TEXT_FILE_TYPE) then exit;
+        if ltx_maxavail < sizeof(TEXT_FILE_TYPE) then exit;
         new(tf);
         assign(tf^.fi, filename);
         settextbuf(tf^.fi, tf^.buffer);
@@ -802,12 +867,15 @@ end;
 
 procedure	text_close(var tf: TEXT_FILE);
 begin
+	if tf = nil then exit;
         close(tf^.fi);
         dispose(tf);
+        tf := nil;
 end;
 
 function	text_rewind(var tf: TEXT_FILE): boolean;
 begin
+	text_rewind := FALSE;
 	if tf = nil then exit;
         {$I-}
         reset(tf^.fi);
@@ -817,30 +885,43 @@ end;
 
 function	text_eof(var tf: TEXT_FILE): boolean;
 begin
+	text_eof := TRUE;
+	if tf = nil then exit;
 	text_eof := eof(tf^.fi);
 end;
 
 function	text_readln(var tf: TEXT_FILE): string;
 var     s	: string;
 begin
+	text_readln := '';
 	if tf = nil then exit;
         readln(tf^.fi, s);
         text_readln := s;
 end;
 
+{ next meaningful line: skips blank and ';' comment lines, trims it, }
+{ closes a '[section' header and removes spaces around 'key = value' }
+{ returns '' at end of file                                          }
 function	text_getline(var tf: TEXT_FILE): string;
 var	tmp, s	: string;
 	i, epos	: integer;
+	found	: boolean;
 begin
+	text_getline := '';
 	if tf = nil then exit;
-	repeat
-		s := text_readln(tf);
-	       	if s <> '' then while s[1] in TEXT_SPACES do delete(s, 1, 1);
-	until	(s[1] <> ';') and (s <> '');
+
+	found := FALSE;
+	while not found and not eof(tf^.fi) do
+	begin
+		readln(tf^.fi, s);
+		while (length(s) > 0) and (s[1] in TEXT_SPACES) do delete(s, 1, 1);
+		while (length(s) > 0) and (s[length(s)] in TEXT_SPACES) do dec(s[0]);
+		found := (s <> '') and (s[1] <> ';');
+	end;
+	if not found then exit;
 
 	if s[1] = '[' then
 	begin
-        	while s[1] in TEXT_SPACES do delete(s, 1, 1);
 		if s[length(s)] <> ']' then s := s + ']';
 	end
 	else
@@ -853,57 +934,58 @@ begin
 				if not (s[i] in TEXT_SPACES) then
 					tmp := tmp + s[i];
 			inc(epos);
-			while s[epos] in TEXT_SPACES do inc(epos);
-			tmp := tmp + copy(s, epos, length(s));
+			while (epos <= length(s)) and (s[epos] in TEXT_SPACES) do inc(epos);
+			tmp := tmp + copy(s, epos, 255);
 			s := tmp;
 		end;
 	end;
 	text_getline := s;
 end;
 
+{ value of 'key' in '[sect]', '' if the section or key is missing }
 function	text_gets(var tf: TEXT_FILE; sect, key: string): string;
-var	value, s,
-	lhs, rhs: string;
-	epos, i	: longint;
+var	s, lhs	: string;
+	epos	: integer;
 	sfound,
 	kfound	: boolean;
 begin
-	value	:= '';
-	sfound	:= FALSE;
-	kfound	:= FALSE;
+	text_gets := '';
+	if tf = nil then exit;
+	if not text_rewind(tf) then exit;
 
-        text_rewind(tf);
+	sect := toupper(sect);
+	key  := toupper(key);
 
-        for i := 1 to length(sect) do sect[i] := upcase(sect[i]);
-        for i := 1 to length(key) do key[i] := upcase(key[i]);
+	sfound := FALSE;
 	while not sfound and not text_eof(tf) do
 	begin
 		s := text_getline(tf);
-                repeat
-                        i := pos(' ', s); if i <> 0 then delete(s, i, 1);
-                until i = 0;
-                repeat
-                        i := pos(#9, s); if i <> 0 then delete(s, i, 1);
-                until i = 0;
-                for i := 1 to length(s) do s[i] := upcase(s[i]);
-		if s = '['+sect+']' then sfound := TRUE;
+		repeat
+			epos := pos(' ', s); if epos <> 0 then delete(s, epos, 1);
+		until epos = 0;
+		repeat
+			epos := pos(#9, s); if epos <> 0 then delete(s, epos, 1);
+		until epos = 0;
+		sfound := toupper(s) = '['+sect+']';
 	end;
+	if not sfound then exit;
 
-	if sfound then
-	repeat
+	kfound := FALSE;
+	while not kfound and not text_eof(tf) do
+	begin
 		s := text_getline(tf);
+		if (s <> '') and (s[1] = '[') then exit;	{ next section }
 		epos := pos('=', s);
-		lhs := copy(s, 1, epos-1);
-                for i := 1 to length(lhs) do lhs[i] := upcase(lhs[i]);
-		if lhs = key then
+		if epos <> 0 then
 		begin
-			rhs := copy(s, epos+1, length(s));
-			kfound := TRUE;
+			lhs := toupper(copy(s, 1, epos-1));
+			if lhs = key then
+			begin
+				text_gets := copy(s, epos+1, 255);
+				kfound := TRUE;
+			end;
 		end;
-	until kfound or text_eof(tf);
-	if sfound and kfound then value := rhs;
-
-	text_gets := value;
+	end;
 end;
 
 function	text_getl(var tf: TEXT_FILE; sect, key: string): longint;
@@ -913,7 +995,7 @@ end;
 
 function	crc32_init: CRC32_TYPE;
 begin
-	crc32_init := -1;	 { $FFFFFFFF }
+	crc32_init := not CRC32_TYPE(0);	 { $FFFFFFFF }
 end;
 
 function	crc32_byte(crc: CRC32_TYPE; c: byte): CRC32_TYPE;
