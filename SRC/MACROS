@@ -1,10 +1,10 @@
 #------------------------------------------------------------------------------
 # File utilities
 #------------------------------------------------------------------------------
-RM=rm		# 'erase' or 'del' under DOS
+RM=del		# 'rm' under Linux
 MD=md		# 'mkdir' under Linux
-CP=cp		# 'copy' under DOS
-MV=mv		# 'move under DOS
+CP=copy		# 'cp' under Linux
+MV=move		# 'mv' under Linux
 UPX=upx		# optional executable compressor
 
 #------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ TMTPC=$(TMTROOT)\BIN\tmtpc
 TPC=$(TP7ROOT)\BIN\tpc
 FPC=$(FPCROOT)\BIN\GO32V2\fpc
 
-LIBROOT=\TMGDL\TEXTMODE
+LIBROOT=\TMGDL
 LIBDIR=$(LIBROOT)\LIB
 
 # ---- TURBO/BORLAND PASCAL FLAGS -----------

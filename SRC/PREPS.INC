@@ -8,10 +8,11 @@
 	{$TPO+}	                { enable typed inc/dec operations }
 {$else}
 	{$ifdef VER70}	        { --- Turbo/Borland Pascal }
+		{ B-: short-circuit booleans, the library relies on it like TMT/FPC }
 		{$ifdef __DEBUG__}
-			{$A+,B+,D+,E+,F+,G+,I+,L+,N+,O-,P+,Q+,R+,S+,T-,V+,X+,Y+}
+			{$A+,B-,D+,E+,F+,G+,I+,L+,N+,O-,P+,Q+,R+,S+,T-,V+,X+,Y+}
 		{$else}
-			{$A+,B+,D-,E-,F+,G+,I-,L-,N+,O-,P+,Q-,R-,S-,T-,V+,X+,Y-}
+			{$A+,B-,D-,E-,F+,G+,I+,L-,N+,O-,P+,Q-,R-,S-,T-,V+,X+,Y-}
 		{$endif}
 		{$ifdef __NOFPU__}
 			{$E+}			{ FPU emulation             }

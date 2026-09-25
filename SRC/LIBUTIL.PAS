@@ -65,14 +65,15 @@ type    PATH_TOKEN_STACK = ^PATH_TOKEN_STACK_TYPE;
                 top	: integer;
 	end;
 
-var     { BIOS timer ticks for INT 1AH }
-	ticks		: longint absolute $0040:$006C;
-
 type
 {$ifdef	__TMT__}
 	CRC32_TYPE = dword;
 {$else}
+{$ifdef	FPC}
+	CRC32_TYPE = longword;
+{$else}
 	CRC32_TYPE = longint;
+{$endif}
 {$endif}
 
 { ///////////////////////////// UTILITIES API ////////////////////////////// }
@@ -352,7 +353,7 @@ var	first_f	: boolean;
         ps	: PATH_TOKEN_STACK;
 begin
 	path_shorten := path;
-	if length(path) < width then exit;
+	if length(path) <= width then exit;
         if width <= 3 then
 	begin
 		path_shorten := STR_ELLIPSIS;
@@ -674,29 +675,39 @@ end;
 { return the file size in bytes }
 function	file_size(filename: string): longint;
 var	f	: FILE;
-	size	: longint;
+	oldmode	: longint;
 begin
-	{$I-}
+	file_size := -1;
+	if filename = '' then exit;
 	assign(f, filename);
+	oldmode  := filemode;
 	filemode := 0;
+	{$I-}
 	reset(f, 1);
-        if ioresult <> 0 then size := -1 else size := filesize(f);
-	close(f);
 	{$I+}
-	file_size := size;
+	filemode := oldmode;
+	if ioresult <> 0 then exit;
+	file_size := filesize(f);
+	close(f);
 end;
 
 { check for the existing file }
 function	file_exist(filename: string): boolean;
 var	f	: FILE;
+	oldmode	: longint;
 begin
-	{$I-}
+	file_exist := FALSE;
+	if filename = '' then exit;
 	assign(f, filename);
+	oldmode  := filemode;
 	filemode := 0;
-	reset(f);
-	close(f);
+	{$I-}
+	reset(f, 1);
 	{$I+}
-	file_exist := (ioresult = 0) and (filename <> '');
+	filemode := oldmode;
+	if ioresult <> 0 then exit;
+	close(f);
+	file_exist := TRUE;
 end;
 
 { delete a file using given file name }
@@ -786,7 +797,7 @@ function        text_open(filename: string): TEXT_FILE;
 var	tf	: TEXT_FILE;
 begin
 	text_open := nil;
-        if ltx_memavail < sizeof(TEXT_FILE_TYPE) then exit;
+        if ltx_maxavail < sizeof(TEXT_FILE_TYPE) then exit;
         new(tf);
         assign(tf^.fi, filename);
         settextbuf(tf^.fi, tf^.buffer);
@@ -803,8 +814,10 @@ end;
 
 procedure	text_close(var tf: TEXT_FILE);
 begin
+	if tf = nil then exit;
         close(tf^.fi);
         dispose(tf);
+        tf := nil;
 end;
 
 function	text_rewind(var tf: TEXT_FILE): boolean;
@@ -819,6 +832,8 @@ end;
 
 function	text_eof(var tf: TEXT_FILE): boolean;
 begin
+	text_eof := TRUE;
+	if tf = nil then exit;
 	text_eof := eof(tf^.fi);
 end;
 
@@ -917,7 +932,7 @@ end;
 
 function	crc32_init: CRC32_TYPE;
 begin
-	crc32_init := -1;	 { $FFFFFFFF }
+	crc32_init := not CRC32_TYPE(0);	 { $FFFFFFFF }
 end;
 
 function	crc32_byte(crc: CRC32_TYPE; c: byte): CRC32_TYPE;
