@@ -146,6 +146,7 @@ procedure       gamePlay;
 var	c       : char;
 	quit,
 	next	: boolean;
+	anim	: ANIM_TYPE;
 begin
 	quit := FALSE; next := FALSE;
 	gameLogo;
@@ -158,6 +159,7 @@ begin
 		gameUpdate;
 		c := wait(['W','A','S','D','R',#27,'?','!']);
 		gameUpdate;
+		next := FALSE;
 		case c of
 		#27:	begin
 				if query(SHADE_RED, '~0CQUIT AND SAVE GAME (~0FY~0C/~0FN~0C) ?') then
@@ -170,10 +172,10 @@ begin
 				scoreSave;
 				next := FALSE;
 			end;
-		'A':	next := boardSlideLeft (board);
-		'D':	next := boardSlideRight(board);
-		'W':	next := boardSlideUp   (board);
-		'S':	next := boardSlideDown (board);
+		'A':	next := boardMove(board, DIR_LEFT , anim);
+		'D':	next := boardMove(board, DIR_RIGHT, anim);
+		'W':	next := boardMove(board, DIR_UP   , anim);
+		'S':	next := boardMove(board, DIR_DOWN , anim);
                 '?':    begin
                 		gameHelp;
                                 next := FALSE;
@@ -182,6 +184,7 @@ begin
 		end;
 		if next then
 		begin
+			boardAnimate(anim);
 			inc(GAME_MOVES);
 			boardPlace(board);
 			boardShow(board);

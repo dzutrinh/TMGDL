@@ -15,11 +15,25 @@ const   BOARD_DIM	= 4;
 	BOARD_H		= BOARD_W shr 1;
 	BOARD_X		= (SCR_WIDTH-BOARD_DIM * BOARD_W) shr 1 + 1;
 	BOARD_Y 	= 11;
-	BOARD_FILLER	= #177#177#177#177#177#177;
+	BOARD_FILLER	= #32#32#32#32#32#32;
+	ANIM_FRAMES	= 8;		{ frames per slide, one per retrace }
 
 type    TILE_TYPE	= longint;
 	VEC4_TYPE    	= array[0..BOARD_DIM-1] of TILE_TYPE;
 	BOARD_TYPE	= array[0..BOARD_DIM-1] of VEC4_TYPE;
+
+	DIR_TYPE	= (DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT);
+
+	{ a tile's path during one slide, in board cells }
+	ANIM_TILE	= record
+		value,			{ log2 of the tile value before the slide }
+		fx, fy,
+		tx, ty	: longint;
+	end;
+	ANIM_TYPE	= record
+		count	: longint;
+		tiles	: array[0..BOARD_SIZE-1] of ANIM_TILE;
+	end;
 
 const   GAME_WINCOND	: longint = 11;
 	GAME_SCORE   	: longint = 0;

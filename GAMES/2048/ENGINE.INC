@@ -4,14 +4,17 @@
 { ////////////////////////////////////////////////////////////////////////// }
 
 { exposed game engine API }
+procedure	cellDraw(i, j: longint; c: byte; const mid: string);	forward;
+procedure	tileDraw(i, j, v: longint);					forward;
+procedure	emptyDraw(x, y: longint);					forward;
 procedure       boardShow(const board: BOARD_TYPE); 				forward;
 function        boardFind(const v: VEC4_TYPE; x, stop: longint): longint;	forward;
-function        boardSlide(var v: VEC4_TYPE): boolean;				forward;
+function        boardSlide(var v, dest: VEC4_TYPE): boolean;			forward;
 procedure       boardRotate(var board: BOARD_TYPE);				forward;
-function        boardSlideUp(var board: BOARD_TYPE): boolean;			forward;
-function        boardSlideLeft(var board: BOARD_TYPE): boolean;			forward;
-function        boardSlideRight(var board: BOARD_TYPE): boolean;		forward;
-function        boardSlideDown(var board: BOARD_TYPE): boolean;			forward;
+procedure	boardLineCell(dir: DIR_TYPE; l, p: longint; var x, y: longint);	forward;
+function	boardMove(var board: BOARD_TYPE; dir: DIR_TYPE;
+			  var anim: ANIM_TYPE): boolean;			forward;
+procedure	boardAnimate(const anim: ANIM_TYPE);				forward;
 function        boardCheckPair(board: BOARD_TYPE): boolean;			forward;
 function        boardCountBlank(board: BOARD_TYPE): longint;			forward;
 function        boardPlace(var board: BOARD_TYPE): boolean;			forward;
@@ -28,32 +31,36 @@ function	scoreSave: boolean;						forward;
 
 { ////////////////////////////////////////////////////////////////////////// }
 
+{ Draws a 3-row board cell at screen position (i, j) }
+procedure	cellDraw(i, j: longint; c: byte; const mid: string);
+begin
+	prints(i, j  , c, BOARD_FILLER);
+	prints(i, j+1, c, mid);
+	prints(i, j+2, c, BOARD_FILLER);
+end;
+
+{ Draws a numbered tile (v = log2 of its value) at screen position (i, j) }
+procedure	tileDraw(i, j, v: longint);
+begin
+	cellDraw(i, j, CELL_COLORS[v+1], make_center(ltoa(1 shl v), BOARD_W));
+end;
+
+{ Draws the empty board cell (x, y) in its checkerboard color }
+procedure	emptyDraw(x, y: longint);
+begin
+	cellDraw(BOARD_X+x*BOARD_W, BOARD_Y+y*BOARD_H,
+		 CELL_COLORS[(x+y) and 1], BOARD_FILLER);
+end;
+
 { Displays the game board }
 procedure       boardShow(const board: BOARD_TYPE);
-var
-	x, y, v,
-	i, j, c	: longint;
+var	x, y	: longint;
 begin
 	for y := 0 to BOARD_DIM-1 do
 	for x := 0 to BOARD_DIM-1 do
-	begin
-		i := BOARD_X+x*BOARD_W; j := BOARD_Y+y*BOARD_H;
-		v := board[x, y];
-		if v <> 0 then
-		begin
-			c := CELL_COLORS[v+1];
-			prints(i, j  , c, BOARD_FILLER);
-			prints(i, j+1, c, make_center(ltoa(1 shl longint(v)), BOARD_W));
-			prints(i, j+2, c, BOARD_FILLER);
-		end
-		else
-		begin
-			c := CELL_COLORS[(x+y) and 1];
-			prints(i, j  , c, BOARD_FILLER);
-			prints(i, j+1, c, BOARD_FILLER);
-			prints(i, j+2, c, BOARD_FILLER);
-		end;
-	end;
+		if board[x, y] <> 0 then
+			tileDraw(BOARD_X+x*BOARD_W, BOARD_Y+y*BOARD_H, board[x, y])
+		else	emptyDraw(x, y);
 end;
 
 { Finds the proper cell to slide to }
@@ -88,8 +95,8 @@ begin
         end;
 end;
 
-{ Slides the board }
-function        boardSlide(var v: VEC4_TYPE): boolean;
+{ Slides a line towards index 0; dest[x] receives where the tile at x went }
+function        boardSlide(var v, dest: VEC4_TYPE): boolean;
 var     success : boolean;
 	x, t,
 	stop    : longint;
@@ -98,6 +105,7 @@ begin
 	success := FALSE;
 	for x := 0 to BOARD_DIM-1 do
         begin
+        	dest[x] := x;
                 if v[x] <> 0 then
                 begin
 			t := boardFind(v, x, stop);
@@ -115,6 +123,7 @@ begin
                                         stop := t+1;
                                 end;
                                 v[x] := 0;
+                                dest[x] := t;
                                 success := TRUE;
                         end;
                 end;
@@ -140,55 +149,90 @@ begin
 	end;
 end;
 
-{ Slides the board up }
-function        boardSlideUp(var board: BOARD_TYPE): boolean;
-var     x       : longint;
-	ok, v	: boolean;
+{ Board cell of position p (0 = the edge tiles slide to) in line l }
+procedure	boardLineCell(dir: DIR_TYPE; l, p: longint; var x, y: longint);
+begin
+	case dir of
+	DIR_UP:		begin x := l;             y := p;             end;
+	DIR_DOWN:	begin x := l;             y := BOARD_DIM-1-p; end;
+	DIR_LEFT:	begin x := p;             y := l;             end;
+	DIR_RIGHT:	begin x := BOARD_DIM-1-p; y := l;             end;
+	end;
+end;
+
+{ Slides the board in a direction, TRUE if anything moved; anim receives }
+{ the path of every tile for boardAnimate                                }
+function	boardMove(var board: BOARD_TYPE; dir: DIR_TYPE;
+			  var anim: ANIM_TYPE): boolean;
+var	l, p,
+	x, y	: longint;
+	v, org,
+	dest	: VEC4_TYPE;
+	ok	: boolean;
 begin
 	ok := FALSE;
-	for x := 0 to BOARD_DIM-1 do
+	anim.count := 0;
+	for l := 0 to BOARD_DIM-1 do
 	begin
-		{ in case compiler option 'Complete boolean eval' is off }
-		v  := boardSlide(board[x]);
-		ok := ok or v;
+		for p := 0 to BOARD_DIM-1 do
+		begin
+			boardLineCell(dir, l, p, x, y);
+			v[p] := board[x, y];
+		end;
+		org := v;
+		if boardSlide(v, dest) then ok := TRUE;
+		for p := 0 to BOARD_DIM-1 do
+		begin
+			boardLineCell(dir, l, p, x, y);
+			board[x, y] := v[p];
+			if org[p] <> 0 then
+			with anim.tiles[anim.count] do
+			begin
+				value := org[p];
+				fx := x;
+				fy := y;
+				boardLineCell(dir, l, dest[p], tx, ty);
+				inc(anim.count);
+			end;
+		end;
 	end;
-	boardSlideUp := ok;
+	boardMove := ok;
 end;
 
-{ Slides the board left }
-function        boardSlideLeft(var board: BOARD_TYPE): boolean;
-var	ok	: boolean;
+{ Plays a slide: every tile glides from its old cell to its new one. Frames }
+{ are composed off-screen and copied on the vertical retrace (no flicker)   }
+procedure	boardAnimate(const anim: ANIM_TYPE);
+var	scr,
+	old	: SCREEN;
+	f, k,
+	x, y,
+	i, j	: longint;
+	moving	: boolean;
 begin
-	boardRotate(board);
-	ok := boardSlideUp(board);
-	boardRotate(board);
-	boardRotate(board);
-	boardRotate(board);
-	boardSlideLeft := ok;
-end;
-
-{ Slides the board down }
-function        boardSlideDown(var board: BOARD_TYPE): boolean;
-var	ok	: boolean;
-begin
-	boardRotate(board);
-	boardRotate(board);
-	ok := boardSlideUp(board);
-	boardRotate(board);
-	boardRotate(board);
-	boardSlideDown := ok;
-end;
-
-{ Slides the board right }
-function        boardSlideRight(var board: BOARD_TYPE): boolean;
-var	ok	: boolean;
-begin
-	boardRotate(board);
-	boardRotate(board);
-	boardRotate(board);
-	ok := boardSlideUp(board);
-	boardRotate(board);
-	boardSlideRight := ok;
+	scr := vscreen_alloc;
+	if scr = nil then exit;			{ no memory: skip the animation }
+	vscreen_grab(scr);
+	old := vscreen_activate(scr);
+	for f := 1 to ANIM_FRAMES do
+	begin
+		for y := 0 to BOARD_DIM-1 do
+		for x := 0 to BOARD_DIM-1 do
+			emptyDraw(x, y);
+		{ resting tiles first, so moving ones slide over them }
+		for moving := FALSE to TRUE do
+		for k := 0 to anim.count-1 do
+		with anim.tiles[k] do
+		if ((fx <> tx) or (fy <> ty)) = moving then
+		begin
+			i := BOARD_X + (fx*BOARD_W + (tx-fx)*BOARD_W*f div ANIM_FRAMES);
+			j := BOARD_Y + (fy*BOARD_H + (ty-fy)*BOARD_H*f div ANIM_FRAMES);
+			tileDraw(i, j, value);
+		end;
+		if ltx_mono then sleep(14) else vsync;
+		vscreen_flip(scr);
+	end;
+	vscreen_activate(old);
+	vscreen_free(scr);
 end;
 
 { Checks for mergeable pair }

@@ -344,6 +344,7 @@ function    vscreen_alloc: SCREEN;
 procedure	vscreen_free(var s: SCREEN);
 function	vscreen_activate(s: SCREEN): SCREEN;
 procedure	vscreen_flip(s: SCREEN);
+procedure	vscreen_grab(s: SCREEN);
 
 { ///////////////////// SCREEN ATTTRIBUTE MODIFIERS //////////////////////// }
 
@@ -1186,10 +1187,22 @@ end;
 { page flipping }
 procedure	vscreen_flip(s: SCREEN);
 begin
+	if s = nil then exit;
 {$ifndef FPC}
 	move(s^, vscreen_vram^, SCR_SIZE);
 {$else}
         dosmemput(VSEG_ADDR, 0, s^, SCR_SIZE);
+{$endif}
+end;
+
+{ copy the visible screen into a virtual screen }
+procedure	vscreen_grab(s: SCREEN);
+begin
+	if s = nil then exit;
+{$ifndef FPC}
+	move(vscreen_vram^, s^, SCR_SIZE);
+{$else}
+        dosmemget(VSEG_ADDR, 0, s^, SCR_SIZE);
 {$endif}
 end;
 
