@@ -201,7 +201,7 @@ var     quit	: boolean;
 
 	procedure	run_render;
 	begin
-		timerDelay((SIMUL_SPEED_MAX-GAME_CONFIG.speed+1) * 16);
+		sleep((SIMUL_SPEED_MAX-GAME_CONFIG.speed+1) * 16);
 		vscreen_flip(vscreen);
 	end;
 

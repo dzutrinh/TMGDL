@@ -42,7 +42,7 @@ begin
 	ltx_init;
 	if ltx_mono then
 		die(-1, 'EGA/VGA adapter is required.');
-	timerInit;
+	ltx_timer_init;
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
@@ -97,7 +97,7 @@ begin
 
         config_save(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG));
 
-	timerDone;
+	ltx_timer_done;
 	ltx_done;
 	blink(BLINK_ON);
 
@@ -202,7 +202,7 @@ var	mvCurrent,
 
 	procedure	gameRender;
 	begin
-		timerDelay(FRAME_TIME);
+		sleep(FRAME_TIME);
 		vscreen_flip(vscreen);
 	end;
 
@@ -219,7 +219,7 @@ var	mvCurrent,
 		begin
 			boardCondense(board, marker);
 			gameRender;
-			timerDelay(COLLAPSE_TIME);	{ wait a little bit }
+			sleep(COLLAPSE_TIME);	{ wait a little bit }
 		end;
 	end;
 

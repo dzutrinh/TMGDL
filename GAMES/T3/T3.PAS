@@ -18,7 +18,7 @@
 
 {$i ../../src/preps.inc}
 
-uses	libtmgd, libutil, libtext, libctls, libtimer;
+uses	libtmgd, libutil, libtext, libctls;
 
 {$i backgd.inc}
 {$i globals.inc}

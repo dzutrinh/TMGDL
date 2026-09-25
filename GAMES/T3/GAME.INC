@@ -324,7 +324,7 @@ begin
 						begin
 							labelSetText(notif, '~03THINKING');
 							gameMoveComputer;
-							timerDelay(320);
+							sleep(320);
 							boardDraw(game.board);
 							state := gameState;
 						end
@@ -334,7 +334,7 @@ begin
 				else
 				begin
 					labelSetText(notif, '~04INVALID MOVE');
-					timerDelay(320);
+					sleep(320);
 				end;
 			KEY_ESC:
 				quit := gameAbort;
