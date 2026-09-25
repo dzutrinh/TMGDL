@@ -18,7 +18,7 @@ Supported compilers:
 | Folder | Contents |
 | --- | --- |
 | `SRC` | The library: `LIBTEXT` (screen, keyboard, timer, dialogs), `LIBCTLS` (controls), `LIBUTIL` (files, folders, drives, config, CRC32), `LIBPACK` (packages), `LIBTMGD` (uses them all) |
-| `GAMES` | 2048, Game of Life, Tic-Tac-Toe and Tetris |
+| `GAMES` | 2048, Arkanoid, Game of Life, Tic-Tac-Toe and Tetris |
 | `TOOLS/PCKMGR` | `PM` package manager, `PCK` command-line packer, `SFX` self-extractor stub |
 | `TOOLS/INSTALL` | Installer driven by `INSTALL.DAT` and a package file |
 | `TOOLS` | `ASCII` character map, `SCANCODE` key code viewer, `VIEWBIN` screen dump viewer |
@@ -49,13 +49,15 @@ compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
 The executables stored in the game folders come from earlier releases; rebuild
-them to get the versions below.
+them to get the versions below. Arkanoid ships as source only: run `make` in
+`GAMES\ARKANOID`.
 
 ## Games
 
 | Game | Version |
 | --- | --- |
 | 2048 (updated version from https://github.com/dzutrinh/2048) | 1.4 |
+| Arkanoid (brick breaker with power-ups) | 1.0 |
 | Game of Life | 1.1 |
 | Tic-Tac-Toe (player vs player or player vs AI) | 1.2 |
 | Tetris | 1.1 |
@@ -63,6 +65,12 @@ them to get the versions below.
 ### 2048
 
 ![](./GAMES/2048/SCREEN.GIF)
+
+### Arkanoid
+
+![](./GAMES/ARKANOID/SCREEN01.GIF)
+
+![](./GAMES/ARKANOID/SCREEN02.GIF)
 
 ### Game of Life
 
