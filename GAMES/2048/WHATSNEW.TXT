@@ -11,6 +11,12 @@
 # What's new:
 ===========
 
+## v1.4:
+ - Tiles slide across the board with an animation.
+ - Empty board cells are drawn as solid blocks.
+ - Pressing '!' after a move no longer counts an extra move.
+ - Built on TMGDL 1.5: millisecond timer, screen clipping.
+
 ## v1.3:
  - Minor user interface updated
 

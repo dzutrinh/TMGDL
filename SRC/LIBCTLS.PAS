@@ -3,7 +3,7 @@
 {   LIBCTLS.PAS                                                              }
 {   -----------                                                              }
 {   Library for text-based common controls                                   }
-{   Version 1.1                                                              }
+{   Version 1.5                                                              }
 {                                                                            }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2016-2021 by Infinity Group                               }
@@ -33,8 +33,8 @@ interface
 
 uses	libtext;
 
-const	LIBCTLS_VERSION	= $0102;
-	LIBCTLS_BUILD	= '0714';
+const	LIBCTLS_VERSION	= $0105;
+	LIBCTLS_BUILD	= '0925';
 
 { //////////////////////////////// LABEL API /////////////////////////////// }
 

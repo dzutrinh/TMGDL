@@ -4,7 +4,7 @@
 {   -----------                                                              }
 {   Utility library for text user interface game under DOS                   }
 {   Can almost replace the CRT unit                                          }
-{   Version 1.3                                                              }
+{   Version 1.5                                                              }
 {                                                                            }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2016-2021 by Infinity Group                               }
@@ -34,8 +34,8 @@ uses	libtext
 
 { ///////////////////////////// DEFINITIONS //////////////////////////////// }
 
-const	LIBUTIL_VERSION	= $0100;	{ library version }
-        LIBUTIL_BUILD	= '0714';	{ library build   }
+const	LIBUTIL_VERSION	= $0105;	{ library version }
+        LIBUTIL_BUILD	= '0925';	{ library build   }
 
 const	TEXT_BUFSIZE	= 4096;
 	TEXT_SPACES	= [#9, #10, #13, #32];

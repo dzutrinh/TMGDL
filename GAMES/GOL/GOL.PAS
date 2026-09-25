@@ -3,7 +3,7 @@
 {   GOL.PAS                                                                  }
 {   -------                                                                  }
 {   Conway's Game Of Life for DOS                                            }
-{   Version 1.00                                                             }
+{   Version 1.1                                                              }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2020-2021 by Infinity Group                               }
 {                                                                            }
@@ -31,7 +31,7 @@ uses	libtmgd, libtext, libctls, libutil;
 {$i game.inc}
 
 begin
-	gameInit(1, 0, '0704');
+	gameInit(1, 1, '0925');
         gameMenu;
 	gameDone;
 end.

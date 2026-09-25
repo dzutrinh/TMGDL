@@ -6,6 +6,9 @@ interface
 
 uses	libtext, libutil;
 
+const	LIBPACK_VERSION	= $0105;	{ library version }
+	LIBPACK_BUILD	= '0925';	{ library build   }
+
 const   PKGFILE_MAX	= 1024;
 	PKGFILE_BUFSIZE	= 1024;
 

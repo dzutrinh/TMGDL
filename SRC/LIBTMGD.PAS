@@ -9,6 +9,9 @@ interface
 uses	libtext, libctls, libpack, libutil;
 
 const
+	LIBTMGD_VERSION	= $0105;	{ TMGDL library version, all units }
+	LIBTMGD_BUILD	= '0925';
+
 {$ifdef __TMT__}
 	COMPILER	: string[3] = 'TMT';
 	ENVIRONMENT	: string[6] = '32-bit';
