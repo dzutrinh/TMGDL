@@ -68,7 +68,7 @@ begin
 
         ANSI_draw(SPLASH_IMG);
 
-        marqueeText(30, 23, 20, $03, 5, '   A cellular automaton simulation game   '#4+
+        marqueeText(30, 23, 20, $03, 275,'   A cellular automaton simulation game   '#4+
 					'   Hit any key to continue   '#4);
 	flushkeys;
 

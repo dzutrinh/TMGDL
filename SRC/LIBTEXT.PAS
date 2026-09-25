@@ -299,7 +299,7 @@ function	ltx_memavail: longint;
 function	ltx_maxavail: longint;
 procedure	ltx_timer_init;
 procedure	ltx_timer_done;
-function	ltx_timer: longint;
+function	ltx_timer: longint;		{ milliseconds }
 function	ltx_offset(x, y: word): word;
 function	ltx_makeb(l, h: byte): byte;
 function	ltx_makew(c: char; a: byte): word;
@@ -326,7 +326,8 @@ procedure	ltx_validate_rect(var x, y: integer; w, h: integer);
 
 procedure	vsync;
 procedure	vsync_sleep(n: longint);
-procedure	sleep(duration: longint);
+procedure	sleep(duration: longint);	{ milliseconds }
+procedure	ltx_idle;
 
 { ////////////////////////////// KEYBOARD API ////////////////////////////// }
 
@@ -680,36 +681,91 @@ begin
 	ltx_version := vtos(LIBTEXT_VERSION, LIBTEXT_BUILD);
 end;
 
-{ initialize high precision timer in milliseconds }
-procedure	ltx_timer_init; assembler;
-asm
-	mov     dx, $43			{ 8254 timer control word }
-	mov	al, $36
-	out	dx, al
+{ ////////////////////////////// TIMER CORE //////////////////////////////// }
+{ ltx_timer counts milliseconds from the BIOS tick count (18.2 Hz) plus the }
+{ position of PIT channel 0 inside the current tick. The PIT keeps its BIOS }
+{ setup, so the DOS clock is never disturbed.                               }
 
-	mov	dx, $40			{ new timer constant for 1.19318 Mhz }
-	mov	al, $A9                 { 04A9h = 1193 }
-	out	dx, al
-	mov	al, $04
-	out	dx, al
-end;
+const	TICKS_PER_DAY	= $1800B0;	{ BIOS tick count wraps at midnight }
 
-function	ltx_timer: longint;
+	TIMER_LAST_TICKS: longint = 0;	{ last raw BIOS tick count seen      }
+	TIMER_DAY_BASE	: longint = 0;	{ ticks added by midnight rollovers  }
+	TIMER_LAST_MS	: longint = 0;	{ last value returned by ltx_timer   }
+
+{ read the BIOS ticks and the PIT clocks elapsed in that tick (0..65535) }
+procedure	timer_sample(var t, elapsed: longint);
+var	status,
+	lo, hi,
+	irr	: byte;
+	count	: longint;
 begin
-	ltx_timer := ticks;
+	asm cli end;
+	t := ticks;
+	outportb($43, $C2);		{ read-back: latch status + count, ch. 0 }
+	status := inportb($40);
+	lo     := inportb($40);
+	hi     := inportb($40);
+	outportb($20, $0A);		{ PIC: select the request register }
+	irr    := inportb($20);
+	asm sti end;
+
+	count := lo or (word(hi) shl 8);
+	if count = 0 then count := 65536;
+
+	if (status and $06) = $06 then
+	begin
+		{ mode 3 (BIOS default): the counter runs down by 2 twice per }
+		{ tick, OUT is high in the first half and low in the second   }
+		elapsed := (65536 - count) shr 1;
+		if (status and $80) = 0 then inc(elapsed, 32768);
+	end
+	else	elapsed := 65536 - count;	{ mode 2: counts down once }
+
+	if elapsed < 0 then elapsed := 0;
+	if elapsed > 65535 then elapsed := 65535;
+
+	{ the counter wrapped but IRQ0 has not been serviced yet }
+	if ((irr and 1) <> 0) and (elapsed < 32768) then inc(t);
 end;
 
-{ restore old timer frequency }
-procedure	ltx_timer_done; assembler;
-asm
-	mov	dx, $43			{ 8253 control word }
-	mov	al, $36 		{ old timer 0 constant = 0 }
-	out	dx, al
+{ milliseconds since the program started using the timer (monotonic) }
+function	ltx_timer: longint;
+var	t, elapsed,
+	ms	: longint;
+begin
+	timer_sample(t, elapsed);
 
-	mov	dx, $40
-	xor	al, al
-	out	dx, al
-	out	dx, al
+	{ BIOS resets the tick count at midnight }
+	if t < TIMER_LAST_TICKS - TICKS_PER_DAY div 2 then
+		inc(TIMER_DAY_BASE, TICKS_PER_DAY);
+	TIMER_LAST_TICKS := t;
+	inc(t, TIMER_DAY_BASE);
+
+	{ a tick is 65536 / 1193182 s = 54.925 ms = 55 - 3/40 ms }
+	ms := t * 55 - t * 3 div 40 + elapsed * 55 div 65536;
+
+	{ never step backwards because of a late IRQ0 or a sampling race }
+	if (ms < TIMER_LAST_MS) and (TIMER_LAST_MS - ms < 1000) then
+		ms := TIMER_LAST_MS;
+	TIMER_LAST_MS := ms;
+	ltx_timer := ms;
+end;
+
+{ kept for compatibility: the timer needs no setup and no longer }
+{ reprograms the PIT (which made the DOS clock run 55x fast)     }
+procedure	ltx_timer_init;
+begin
+	TIMER_LAST_TICKS := ticks;
+end;
+
+procedure	ltx_timer_done;
+begin
+end;
+
+{ give the CPU back to DOS/multitaskers while busy-waiting }
+procedure	ltx_idle; assembler;
+asm
+	int	$28
 end;
 
 { determine the offset of (x, y) inside a screen buffer, (1-80,1-25) }
@@ -1040,12 +1096,13 @@ begin
 	end;
 end;
 
-{ timer-based delay }
+{ timer-based delay in milliseconds }
 procedure	sleep(duration: longint);
-var	timer	: longint;
+var	start	: longint;
 begin
-	timer := ticks;
-	while abs(ticks-timer) < duration do;
+	if duration <= 0 then exit;
+	start := ltx_timer;
+	while ltx_timer - start < duration do ltx_idle;
 end;
 
 { read a character }
@@ -1080,11 +1137,20 @@ begin
 end;
 
 { set keyboard typematic speed }
+{ set the typematic byte (bits 0-4 rate, bits 5-6 delay) through the BIOS, }
+{ which handles the keyboard controller handshake                        }
 procedure	keyboard_speed(speed: word);
+var	rate,
+	delay	: byte;
 begin
-	outportb($60, $F3);
-	sleep(2);
-	outportb($60, speed);
+	rate  := speed and $1F;
+	delay := (speed shr 5) and 3;
+	asm
+		mov	ax, $0305
+		mov	bh, delay
+		mov	bl, rate
+		int	$16
+	end {$ifdef FPC}['EAX','EBX']{$endif};
 end;
 
 { return the pointer to the video RAM }
