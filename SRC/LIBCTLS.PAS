@@ -756,7 +756,7 @@ end;
 
 { //////////////////////////// TEXT MARQUEE API //////////////////////////// }
 
-{ run a text marquee until a key is hit }
+{ run a text marquee until a key is hit, 'speed' is milliseconds per step }
 procedure	marqueeText(x, y, w, attr, speed: integer; text: string);
 var	tmp	: string;
 	st, at,
