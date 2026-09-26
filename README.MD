@@ -281,7 +281,7 @@ Folder: [`GAMES/2048`](./GAMES/2048)
 
 ### Arkanoid
 
-Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds. The field is drawn in half-block pixels: the ball is one square pixel and every row of a level is two thin rows of bricks, so the ball has twice the room to move.
+Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), like the arcade: a metal frame, bricks of 6 x 3 pixels with their shadows, a silver Vaus, and the score, the round and the power-ups on a panel at the right.
 
 Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
 
