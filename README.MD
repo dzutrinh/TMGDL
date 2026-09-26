@@ -439,7 +439,7 @@ Folder: [`GAMES/SNAKE`](./GAMES/SNAKE)
 
 ### Sokoban
 
-Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level. Every tile is a 4 x 4 picture in half-block pixels, and the keeper and the crates slide from tile to tile.
+Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level. It plays in the [160 x 100 mode](#low-res-160-x-100-mode): every tile is an 8 x 8 picture (bricks, braced crates, goal rings, a keeper with a face), and the keeper and the crates slide from tile to tile.
 
 Keys: arrows or `W` `A` `S` `D` walk and push, `U` undo, `R` restart, `N`/`B` next/previous level, `ESC` pause menu (continue, restart level, quit to main menu).
 
