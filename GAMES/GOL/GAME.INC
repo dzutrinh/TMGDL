@@ -255,7 +255,7 @@ begin
 		if GAME_CONFIG.step then
 		begin
                 	repeat
-				key := getkey;
+				key := getkey_single;
                         until (key = KEY_ESC) or (key = KEY_SPACE) or
                               (key = KEY_ENTER) or (key = KEY_R);
                         case key of
@@ -345,7 +345,7 @@ begin
                 while y + PATTERNS_LIST[c].h - 1 >= FIELD_H do dec(y);
 
                	block_put(@PATTERNS_LIST[c], x shl 1 + 1, y + 1, $8F);
-                key := getkey;
+                key := getkey_single;
                 case key of
                 KEY_SHIFT_TAB:	if c > 1 then dec(c) else c := PATTERNS_MAX;
                 KEY_TAB:	if c < PATTERNS_MAX then inc(c) else c := 1;
@@ -414,7 +414,7 @@ begin
 			change := FALSE;
                 end;
         	cellular(GAME_COLONY, c, r, TRUE);
-		key := getkey;
+		key := getkey_single;
                 cellular(GAME_COLONY, c, r, FALSE);
 		case key of
 		KEY_SPACE:      begin

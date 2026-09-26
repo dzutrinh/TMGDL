@@ -588,6 +588,9 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   versions, and the settings of some games, are reset once.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
+- `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
+  the BIOS buffer, so a held key no longer keeps acting after it is let go in
+  programs that take a while over each key. The turn-based games use it.
 
 ## Known issues
 

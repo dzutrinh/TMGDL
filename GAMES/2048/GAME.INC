@@ -175,7 +175,8 @@ var	c       : char;
 	quit,
 	next	: boolean;
 	anim	: ANIM_TYPE;
-	score	: longint;
+	score,
+	k	: longint;
 begin
 	quit := FALSE; next := FALSE;
 	anim.count := 0;
@@ -187,7 +188,11 @@ begin
 	else	stateRestart(board);
 	repeat
 		gameUpdate;
-		c := wait(['W','A','S','D','R','H','M',#27,'?','!']);
+		{ one key at a time: repeats piled up during a slide are dropped }
+		repeat
+			k := getkey_single;
+			c := chr(k and $FF);
+		until (k < 256) and (c in ['W','A','S','D','R','H','M',#27,'?','!']);
 		gameUpdate;
 		next := FALSE;
 		score := GAME_SCORE;

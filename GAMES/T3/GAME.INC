@@ -298,7 +298,7 @@ begin
                         else	labelSetText(notif, 'CELL ['+gamePlayerSymbol(COLOR_TYPE(cell))+'~07]');
 
 			boardJump(game.board, c, r, TRUE);
-			key := getkey;
+			key := getkey_single;
 			boardJump(game.board, c, r, FALSE);
 
 			case key of

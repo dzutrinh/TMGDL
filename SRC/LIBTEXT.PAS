@@ -340,6 +340,7 @@ procedure	ltx_idle_hook(hook: LTX_HOOK);
 function	readkey: char;
 function	keypressed: boolean;
 function	getkey: longint;
+function	getkey_single: longint;
 procedure	flushkeys;
 procedure	keyboard_speed(speed: word);
 
@@ -1183,6 +1184,60 @@ begin
 	if c = #0 then	k := (ord(readkey) shl 8) + ord(c)
 	else		k := ord(c);
 	getkey := k;
+end;
+
+{ the BIOS keyboard buffer: a ring of words (ASCII code, scan code) in the }
+{ BIOS data segment, from [40:80] to [40:82], read at [40:1A], written at }
+{ [40:1C]                                                                 }
+{$ifdef FPC}
+function	kbd_word(ofs: word): word;
+begin
+	kbd_word := memw[$0040:ofs];
+end;
+
+procedure	kbd_head(ofs: word);
+begin
+	memw[$0040:$001A] := ofs;
+end;
+{$else}
+var	BIOS_WORDS	: array[0..255] of word absolute $0040:$0000;
+
+function	kbd_word(ofs: word): word;
+begin
+	kbd_word := BIOS_WORDS[ofs shr 1];
+end;
+
+procedure	kbd_head(ofs: word);
+begin
+	BIOS_WORDS[$1A shr 1] := ofs;
+end;
+{$endif}
+
+{ a key, and the copies of it the typematic repeat has piled up right behind }
+{ it thrown away. A program slower than the repeat rate (a turn, a redraw   }
+{ or an animation for each key) otherwise goes on replaying a held key long }
+{ after it is let go, and seems not to listen                               }
+function	getkey_single: longint;
+var	k, next	: longint;
+	w, head	: word;
+	c	: byte;
+begin
+	k := getkey;
+	repeat
+		head := kbd_word($001A);
+		if head = kbd_word($001C) then break;		{ nothing waits }
+		w := kbd_word(head);
+		c := lo(w);
+		if (c = 0) or (c = $E0) then
+			next := longint(hi(w)) shl 8
+		else	next := ord(upcase(chr(c)));
+		if next <> k then break;
+		{ the same key again: take it out of the ring }
+		inc(head, 2);
+		if head >= kbd_word($0082) then head := kbd_word($0080);
+		kbd_head(head);
+	until FALSE;
+	getkey_single := k;
 end;
 
 { discard any available keys in the buffer }
