@@ -3,4 +3,62 @@
 ~0Aณณ ณณ ณ ณ ณณ ณณ ณ  ณณ ณ ณ  ณณ
 ~02ภู ูู ู ู ภู ภู ู  ภู ู ู  ภู
 
-END OF HELP ----------------------
+~02ออออ~0Aอออ ~0FINTRODUCTION ~0Aออออออออ~02อออออออออออออออออออออ
+
+The ~0FGame of Life~07 was invented by the mathematician
+~0FJohn Conway~07 in 1970. It is not played: you set
+up a colony of cells, then watch it live. Each
+cell of the ~0F25 x 25~07 field is alive or dead, and
+every generation all the cells change at once by
+counting their eight neighbours:
+
+ ~0E* ~07A dead cell with exactly ~0F3~07 live neighbours
+   is ~0Aborn~07.
+ ~0E* ~07A live cell with ~0F2~07 or ~0F3~07 live neighbours
+   ~0Blives on~07.
+ ~0E* ~07Any other live cell ~0Cdies~07, of loneliness or
+   of overcrowding.
+
+The field wraps around: a cell on the left edge
+is a neighbour of the cells on the right edge,
+and the top touches the bottom.
+
+Such simple rules make surprising shapes: still
+lifes that never change, oscillators that repeat
+and gliders that crawl across the field.
+
+~01ออออ~09อออ ~0FTHE SIMULATION ~09ออออออออ~01อออออออออออออออออออ
+
+ ~0E* ~0FStep / auto run~08 . . . . ~0BSPACE
+ ~0E* ~0FNext generation~08 . . . . ~0BENTER
+ ~0E* ~0FPause / resume~08. . . . . ~0AP
+ ~0E* ~0FRandom colony~08 . . . . . ~0AR
+ ~0E* ~0FSlower / faster~08 . . . . ~0DLEFT RIGHT
+ ~0E* ~0FBack to the menu~08. . . . ~0CESC
+
+In ~0Fstep~07 mode each ~0BENTER~07 makes one generation;
+in ~0Fauto~07 mode they run by themselves at one of
+ten speeds. ~0FGENERATION~07 counts them.
+
+~05ออออ~0Dอออ ~0FTHE COLONY EDITOR ~0Dออออออออ~05ออออออออออออออออ
+
+ ~0E* ~0FMove the cursor~08 . . . . ~0BArrows~07 or ~0BW A S D
+ ~0E* ~0FEdges of the field~08. . . ~0BCTRL~07+~0BArrows
+ ~0E* ~0FToggle a cell~08 . . . . . ~0ASPACE
+ ~0E* ~0FPlace a pattern~08 . . . . ~0EP
+ ~0E* ~0FClear / fill~08. . . . . . ~0DC ~07/ ~0DF
+ ~0E* ~0FInvert / random~08 . . . . ~0DI ~07/ ~0DR
+ ~0E* ~0FBack to the menu~08. . . . ~0CESC
+
+~0EP~07 offers ~0F12~07 famous patterns: the glider, the
+clock, spaceships, the traffic light, the pulsar,
+the R-pentomino, diehard, acorn and more. ~0BTAB
+and ~0BSHIFT~07-~0BTAB~07 pick one, the arrows move it,
+~0AENTER~07 drops it and ~0CESC~07 cancels. The colony is
+kept in ~0FGOL.MAP~07 for the next time.
+
+~06ออออ~0Eอออ ~0FOPTIONS ~0Eออออออออ~06ออออออออออออออออออออออออออ
+
+ ~0E* ~0FAlive~07, ~0FDead~07: the colors of the cells.
+ ~0E* ~0FInvert colors~07: swaps the two colors.
+ ~0E* ~0FSound effects~07: PC speaker sounds on or off.

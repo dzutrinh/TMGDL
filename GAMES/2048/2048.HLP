@@ -1,1 +1,48 @@
-2048 HELP FILE
+      ~0Cฺฤฤฟ ~0Eฺฤฤฟ ~0Aฺ  ฟ ~0Bฺฤฤฟ
+      ~0Cฺฤฤู ~0Eณ  ณ ~0Aภฤฤด ~0Bรฤฤด
+      ~0Cภฤฤู ~0Eภฤฤู ~0A   ู ~0Bภฤฤู
+
+~06ออออ~0Eอออ ~0FHOW TO PLAY ~0Eออออออออ~06ออออออออออออออออออออออ
+
+The board has ~0F4 x 4~07 squares. Every move slides
+~0Fall~07 the tiles as far as they go, up, down, left
+or right. Two tiles with the same number that run
+into each other merge into one tile of their sum:
+
+        ~1F 2 ~07 + ~1F 2 ~07 = ~2F 4 ~07     ~3F 8 ~07 + ~3F 8 ~07 = ~4F 16 ~07
+
+After each move a new tile shows up on an empty
+square: a ~0F2~07, or now and then (one time in ten)
+a ~0F4~07. Make a ~0E2048~07 tile to win. The game is over
+when the board is full and no two tiles next to
+each other are the same.
+
+~02ออออ~0Aอออ ~0FSCORE ~0Aออออออออ~02ออออออออออออออออออออออออออออ
+
+Every merge scores the value of the new tile: two
+~0F64~07 tiles that meet give ~0F128~07 points. The eight
+best scores are kept, with your name, and ~0EH~07 shows
+them. ~0FMOVES~07 counts the moves of this game.
+
+~09ออออ~0Bอออ ~0FTIPS ~0Bออออออออ~09อออออออออออออออออออออออออออออ
+
+ ~0E* ~07Keep the biggest tile in a corner, and build
+   the row next to it in order.
+ ~0E* ~07Use mostly two or three directions: a move
+   the other way can pull the big tile out of
+   its corner.
+ ~0E* ~07Merge small tiles early, before they block
+   the board.
+
+~01ออออ~09อออ ~0FCONTROLS ~09ออออออออ~01อออออออออออออออออออออออออ
+
+ ~0E* ~0FSlide the tiles~08 . . . . ~0BW A S D
+ ~0E* ~0FNew game~08. . . . . . . . ~0ER
+ ~0E* ~0FHigh scores~08 . . . . . . ~0EH
+ ~0E* ~0FSound on / off~08. . . . . ~0EM
+ ~0E* ~0FHelp / about~08. . . . . . ~09? ~07/ ~09!
+ ~0E* ~0FQuit~08. . . . . . . . . . ~0CESC
+
+The game is saved when you quit and goes on the
+next time. On the title screen, ~0AENTER~07 starts
+and ~0CESC~07 leaves.

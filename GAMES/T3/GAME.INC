@@ -443,7 +443,7 @@ begin
 			changed := FALSE;
 		end;
 
-		choice := menuPopup(m, SHADE_WHITE, -1, 15,
+		choice := menuPopup(m, SHADE_WHITE, -1, 14,
 				    MENU_TEXT_CLR, MENU_ACCENT_CLR, '');
 		case choice of
 		CMD_GAME_START:	gamePlay;

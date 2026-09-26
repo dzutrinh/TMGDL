@@ -81,7 +81,7 @@ begin
 
 	prints(72, 25, $08, 'v' + vtos(GAME_VERSION, GAME_BUILD));
 
-	shaded_box(HELP_X, HELP_Y, 16, 12, SHADE_WHITE, AF_LEFT, '~0FCONTROL');
+	shaded_box(HELP_X, HELP_Y, 18, 12, SHADE_WHITE, AF_LEFT, '~0FCONTROL');
 	print(HELP_X+2, HELP_Y+1, '~08.   ~0AW ~02UP   ');
 	print(HELP_X+2, HELP_Y+2, '~07.   ~0AS ~02DOWN ');
 	print(HELP_X+2, HELP_Y+3, '~0F.   ~0AA ~02LEFT ');

@@ -3,4 +3,40 @@
  ณ  ณ ณ      ณ  ณณ ณ      ณ  ณณ ณณ
  ู  ู ภู     ู  ูู ภู     ู  ภู ภู
 
-END OF HELP ----------------------
+~06ออออ~0Eอออ ~0FHOW TO PLAY ~0Eออออออออ~06ออออออออออออออออออออออ
+
+~0FTic-Tac-Toe~07, or ~0FNoughts and Crosses~07, is played
+on a ~0F3 x 3~07 board. The players take turns putting
+their mark, ~0FO~07 or ~0FX~07, on an empty square; ~0FO
+always goes first. The first to get ~0Ethree in a
+~0Erow~07, across, down or diagonally, wins. When
+the board is full with no row, it is a ~0Etie~07.
+
+Played well by both sides, every game is a tie.
+
+~02ออออ~0Aอออ ~0FGAME MODES ~0Aออออออออ~02อออออออออออออออออออออออ
+
+ ~0E* ~0FVS HUMAN~07: two players at one keyboard.
+ ~0E* ~0FVS AI~07: you play ~0FO~07, the computer plays ~0FX~07:
+   ~0Feasy~07 grabs a win it can see but little
+   else, ~0Fmedium~07 also blocks your wins, and
+   ~0Fhard~07 thinks every game to the end: it
+   never loses.
+
+The wins of each side and the ties are counted
+for as long as the game runs.
+
+~01ออออ~09อออ ~0FCONTROLS ~09ออออออออ~01อออออออออออออออออออออออออ
+
+ ~0E* ~0FMove the cursor~08 . . . . ~0BArrows~07 or ~0BW A S D
+ ~0E* ~0FPut your mark~08 . . . . . ~0ASPACE~07 or ~0AENTER
+ ~0E* ~0FHelp / about~08. . . . . . ~09H~07 / ~09?
+ ~0E* ~0FLeave the game~08. . . . . ~0CESC
+
+After a game, ~0ASPACE~07 or ~0AENTER~07 starts the next.
+
+~05ออออ~0Dอออ ~0FOPTIONS ~0Dออออออออ~05ออออออออออออออออออออออออออ
+
+ ~0E* ~0FUse heart icon~07: hearts instead of noughts.
+ ~0E* ~0FCross~07, ~0FNought~07: the colors of the marks.
+ ~0E* ~0FSound effects~07: PC speaker sounds on or off.
