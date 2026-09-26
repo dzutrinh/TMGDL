@@ -25,7 +25,6 @@ const   FRAME_TIME	= 16;		{ milliseconds per frame            }
 var	board	: BOARD_TYPE;		{ global board game                 }
 	pieces	: PIECE_TYPE;		{ represent current tetromino       }
 	marker	: MARKER_TYPE;		{ for counting filled rows          }
-	vscreen	: pchar;		{ double-buffering                  }
 
 procedure	gameSelectColorScheme;
 begin
@@ -62,9 +61,6 @@ begin
 	GAME_COPYRIGHTS	:= 'Tetris (c) 2020-2021 by Infinity Group'#13#10+
 			   'Coded by Trinh D.D. Nguyen';
 
-	vscreen := vscreen_alloc;
-	if vscreen = nil then die(-1, 'Not enough memory for double-buffering');
-
 	randomize;
 	cursor(CURSOR_OFF);
 	blink(BLINK_OFF);
@@ -93,8 +89,6 @@ end;
 
 procedure	gameDone;
 begin
-	vscreen_free(vscreen);
-
 	counterDestroy(GAME_SCORE);
 	counterDestroy(GAME_LEVEL);
 	counterDestroy(GAME_PIECES);
@@ -141,54 +135,47 @@ begin
 	else	info(SHADE_RED, 'CANNOT OPEN HELP FILE.');
 end;
 
+{ the panels at both sides of the board }
 procedure	gamePanels(scr, pcs: longint; mv: MOVE_TYPE; redraw: boolean);
-var	i	: integer;
+const	LOGO		: string[6] = 'TETRIS';
+	LOGO_COLORS	: array[1..6] of byte = (12, 14, 10, 11, 9, 13);
+var	i, x	: integer;
+	name	: string;
 begin
-	if redraw then
+	{ left: the name, the counters, the keys }
+	for i := 1 to 6 do
 	begin
-		for i := 1 to 4 do print(6, i, GAME_LOGO[i]);
-
-		shaded_box(PNL_CONTROL_X, PNL_CONTROL_Y, 24, 12, SHADE_WHITE, AF_LEFT, '~08[ ~0FCONTROL ~08]');
-		if GAME_CONFIG.control = KS_WSAD then
-		begin
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+1, '~08.     ~0CQ: ~04SPIN CCW');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+2, '~08.     ~0CW: ~04SPIN CW');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+3, '~07.     ~0EA: ~06LEFT');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+4, '~0F.     ~0ES: ~06DOWN');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+5, '~0F.     ~0ED: ~06RIGHT');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+6, '~07. ~0ASPACE: ~02DROP');
-		end
-		else
-		begin
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+1, '~08.     ~0C/: ~04SPIN CW');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+2, '~08.     ~0C'#24': ~04SPIN CCW');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+3, '~07.     ~0E'#27': ~06LEFT');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+4, '~0F.     ~0E'#25': ~06DOWN');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+5, '~0F.     ~0E'#26': ~06RIGHT');
-			print(PNL_CONTROL_X+2, PNL_CONTROL_Y+6, '~07. ~0AENTER: ~02DROP');
-		end;
-		print(PNL_CONTROL_X+2, PNL_CONTROL_Y+7 , '~07.     ~0BB: ~03COLOR-BLIND');
-		print(PNL_CONTROL_X+2, PNL_CONTROL_Y+8 , '~07.     ~0BH: ~03HINT');
-		print(PNL_CONTROL_X+2, PNL_CONTROL_Y+9 , '~08.     ~09P: ~01PAUSE');
-		print(PNL_CONTROL_X+2, PNL_CONTROL_Y+10, '~08.   ~0DESC: ~05QUIT');
-
-		counterShow(GAME_SCORE);
-		counterShow(GAME_LEVEL);
-		counterShow(GAME_PIECES);
-		counterShow(GAME_LINES);
-
-		shaded_box(PNL_HOF_X, PNL_HOF_Y, 24, 7, SHADE_WHITE, AF_LEFT, '~08[ ~0FLEADER BOARD ~08]');
-		hiscoreDraw(GAME_SCORES, PNL_HOF_X + 2, PNL_HOF_Y + 1, 8, FALSE, 0);
+		lores_bar(4 + (i - 1) * 8, 2, 7, 9, LOGO_COLORS[i]);
+		lores_text(6 + (i - 1) * 8, 4, LOGO[i], 0);
 	end;
+	lores_text(2, 17, 'SCORE', 12);
+	lores_text(2, 23, lpad(ltoa(scr), 8), 15);
+	lores_text(2, 31, 'LEVEL', 9);
+	lores_text(2, 37, lpad(ltoa(counterGetValue(GAME_LEVEL)), 8), 15);
+	lores_text(2, 45, 'LINES', 10);
+	lores_text(2, 51, lpad(ltoa(counterGetValue(GAME_LINES)), 8), 15);
+	lores_text(2, 59, 'PIECES', 13);
+	lores_text(2, 65, lpad(ltoa(pcs), 8), 15);
+	lores_text(2, 76, 'H HINT', 8);
+	lores_text(2, 82, 'B COLORS', 8);
+	lores_text(2, 88, 'P PAUSE', 8);
+	lores_text(2, 94, 'ESC QUIT', 8);
 
+	{ right: the next piece and the leader board }
+	x := BOARD_X + BOARD_WIDTH * CELL + 6;
 	if GAME_CONFIG.next then
 	begin
-		shaded_box(PNL_NEXT_X, PNL_NEXT_Y, 24, 6, SHADE_YELLOW, AF_LEFT, '~08[ ~0FNEXT ~08]');
-		pieceDraw(pieces, mv, PNL_NEXT_X+8, PNL_NEXT_Y+1);
+		lores_text(x, 2, 'NEXT', 14);
+		lores_rect(x, 8, 22, 22, 8);
+		pieceDraw(pieces, mv, x + 3, 11);
 	end;
-
-	counterSetValue(GAME_PIECES, pcs);
-	counterSetValue(GAME_SCORE,  scr);
+	lores_text(x, 36, 'BEST', 11);
+	for i := 1 to GAME_SCORES.size do
+	begin
+		name := ltoa(GAME_SCORES.entries[i].score);
+		lores_text(x, 36 + i * 7, copy(GAME_SCORES.entries[i].name, 1, 5), 7);
+		lores_text(LORES_W - 1 - lores_text_width(name), 36 + i * 7, name, 15);
+	end;
 end;
 
 function	gameLoop: boolean;
@@ -210,7 +197,7 @@ var	mvCurrent,
 	procedure	gameRender;
 	begin
 		sleep(FRAME_TIME);
-		vscreen_flip(vscreen);
+		lores_flip;
 	end;
 
 	procedure	gameDraw;
@@ -218,6 +205,7 @@ var	mvCurrent,
 		if GAME_CONFIG.hint then
 			boardPieceShadow(board, pieces, mvCurrent, cx, cy);
 
+		lores_clear(0);
 		gamePanels(gameScore, pieceCount, mvNext, FALSE);
 
 		boardDraw(board);
@@ -268,10 +256,9 @@ var	mvCurrent,
 				goDown := TRUE;
 			end;
 			if key = GAME_KEYS[MAPPER_QUIT] then
-				if query(SHADE_RED, '~0CABORT CURRENT GAME (~0FY~0C/~0FN~0C)?') then
-					gameAbort := TRUE;
+				if lores_ask('QUIT? Y/N', 'YN'#27) = 'Y' then gameAbort := TRUE;
 			if key = GAME_KEYS[MAPPER_PAUSE] then
-				info(SHADE_YELLOW, '~0EGAME PAUSED. ~0FENTER ~0ETO CONTINUE...');
+				lores_ask('PAUSED', 'P'#13#27' ');
 			if key = GAME_KEYS[MAPPER_SPIN_CW] then
 				gameTryRotate(TRUE);
 			if key = GAME_KEYS[MAPPER_SPIN_CCW] then
@@ -288,8 +275,6 @@ var	mvCurrent,
 				if not GAME_CONFIG.hint then
 					boardRowFill(board, BOARD_HEIGHT-1, BOARD_BORDER);
 			end;
-			{ secret key to take a screen shot }
-			if key = KEY_F12 then screen_dump(FILE_SNAPSHOT);
                         if key = KEY_B then
                         begin
                                 GAME_CONFIG.cblind := not GAME_CONFIG.cblind;
@@ -357,7 +342,12 @@ var	mvCurrent,
 	end;
 
 begin
-	vscreen_activate(vscreen);
+	gameLoop := TRUE;
+	if not lores_init then
+	begin
+		info(SHADE_RED, 'THE GAME NEEDS AN EGA OR VGA CARD.');
+		exit;
+	end;
 	moveGenerate(mvCurrent);
 	moveGenerate(mvNext);
 
@@ -373,8 +363,6 @@ begin
 	gameAbort	:= FALSE;
 	dropPiece	:= FALSE;
 
-	gamePanels(gameScore, pieceCount, mvNext, TRUE);
-	vscreen_flip(vscreen);
 
 	while not gameOver and not gameAbort do
 	begin
@@ -393,13 +381,14 @@ begin
 	if gameOver and not gameAbort then
 	begin
 		snd_play(SFX_DIE);
-		info(SHADE_MAGENTA, '~0D GAME OVER! ');
+		lores_ask('GAME OVER', #13#27' ');
 	end;
 
+	lores_done;
+	gameBackground;
+	gameShowVersion;
 	hiscoreEnter(GAME_SCORES, gameScore, 'LEVEL ' + ltoa(counterGetValue(GAME_LEVEL)),
 		     'NEW HIGH SCORE', SHADE_WHITE);
-
-	vscreen_activate(vscreen_vram);
 
 	gameLoop := gameAbort;
 end;

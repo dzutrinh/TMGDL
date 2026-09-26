@@ -463,7 +463,7 @@ Folder: [`GAMES/SOLITAIR`](./GAMES/SOLITAIR)
 
 ### Tetris
 
-Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode and a leader board.
+Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode and a leader board. It plays in the [160 x 100 mode](#low-res-160-x-100-mode): shaded blocks of 4 x 4 pixels on a board that fills the height of the screen, the scores at the left and the next piece and the best players at the right.
 
 Keys: `A` `S` `D` move, `W`/`Q` spin, `SPACE` drop (or arrows, `/` and `ENTER`), `H` hint, `B` colour-blind, `P` pause, `ESC` quit.
 

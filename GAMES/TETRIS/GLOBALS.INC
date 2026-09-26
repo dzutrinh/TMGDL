@@ -7,12 +7,12 @@ type	PIECE_SHAPE	= array[1..2] of char;
 
 const	BOARD_WIDTH	= 12;
 	BOARD_HEIGHT	= 25;
-	BOARD_X		= (SCR_WIDTH - (BOARD_WIDTH shl 1)) shr 1+1;
-	BOARD_Y		= (SCR_HEIGHT - BOARD_HEIGHT) shr 1+1;
+	CELL		= 4;	{ a block: 4 x 4 pixels of the 160 x 100 screen }
+	BOARD_X		= (LORES_W - BOARD_WIDTH * CELL) div 2;
+	BOARD_Y		= 0;
 
 	PIECE_SIZE	= 4;	{ size of each piece }
 	PIECE_MAX	= 7;	{ maximum 7 piece types }
-	PIECE_TEXT	: PIECE_SHAPE = #219#219;
 	MAX_LEVELS	= 10;
 
         BOARD_BLANK	= 0;
@@ -119,10 +119,6 @@ const	TETRIS_PIECES	: array[1..PIECE_MAX] of TETROMINO =
 			(30, 28, 26, 24, 22,
 			 20, 19, 18, 17, 16);
 
-	BOARD_TEXT_BLANK	: PIECE_SHAPE = #250#32;
-	BOARD_TEXT_PIECE	: PIECE_SHAPE = #177#177;
-	BOARD_TEXT_WIPE		: PIECE_SHAPE = '>>';
-	BOARD_TEXT_BORDER	: PIECE_SHAPE = #219#219;
 
 	CONTROLS_WSAD	: CONTROLS =
 			  (KEY_S,
@@ -192,7 +188,6 @@ const	PNL_NEXT_X	= 55;
 	FILE_HELP	: string[12] = 'TETRIS.HLP';
 	FILE_SCORES	: string[12] = 'TETRIS.HI';
 	SCORE_NAMES	= 'STEVE|KACEY|JOSH|CHRIS|MIRANDA';
-	FILE_SNAPSHOT	: string[12] = 'TETRIS.BIN';
 
 	MENU_TEXT_CLR	: byte = $07;
 	MENU_ACCENT_CLR	: byte = $1F;
@@ -222,12 +217,6 @@ const	PNL_NEXT_X	= 55;
 					$0F,	{ BOARD WIPE }
 					$08,	{ BOARD SHADOW }
 					$07);	{ BOARD BORDER }
-
-	GAME_LOGO	: array[1..4] of string[24] =
-		('~0FÚÂ¿ Ú¿ ÚÂ¿ Ú¿ ù Ú¿',
-		 '~0D ³  Ã   ³  ³³ ³ ³³',
-		 '~05 ³  ³³  ³  ³Ù ³ À¿',
-		 '~08 Ù  ÀÙ  Ù  ÙÙ Ù ÀÙ');
 
 	GAME_LINES	: PCOUNTER  = nil; { number of lines collapsed    }
 	GAME_PIECES	: PCOUNTER  = nil; { number of pieces generated   }

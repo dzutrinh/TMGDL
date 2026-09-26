@@ -103,22 +103,46 @@ begin
 	for y := 0 to BOARD_HEIGHT-1 do boardRowDraw(b, y);
 end;
 
+{ a block at pixel (x, y): its face, lit at the top and the left, in the }
+{ shade at the bottom and the right                                      }
+procedure	blockDraw(x, y: longint; kind: byte);
+var	face,
+	dark	: byte;
+begin
+	case kind of
+	BOARD_BLANK:
+		begin
+			lores_bar(x, y, CELL, CELL, 0);
+			lores_set(x + 1, y + 1, 8);
+		end;
+	BOARD_SHADOW:
+		begin
+			lores_bar(x, y, CELL, CELL, 0);
+			lores_rect(x, y, CELL, CELL, 8);
+		end;
+	BOARD_WIPE:
+		lores_bar(x, y, CELL, CELL, 15);
+	else
+		begin
+			if kind = BOARD_BORDER then face := 7 else face := pieceColor(kind) and $0F;
+			if face >= 8 then dark := face - 8 else dark := 8;
+			if face = 7 then dark := 8;
+			lores_bar(x, y, CELL, CELL, face);
+			lores_bar(x, y, CELL, 1, 15);
+			lores_bar(x, y, 1, CELL, 15);
+			lores_bar(x + 1, y + CELL - 1, CELL - 1, 1, dark);
+			lores_bar(x + CELL - 1, y + 1, 1, CELL - 1, dark);
+		end;
+	end;
+end;
+
 procedure	boardRowDraw(const b: BOARD_TYPE; y: longint);
 var	x, o	: longint;
-	block	: PIECE_SHAPE;
 begin
 	o := boardOffset(0, y);
 	for x := 0 to BOARD_WIDTH-1 do
 	begin
-		case b[o] of
-		BOARD_BLANK	: block := BOARD_TEXT_BLANK;
-		BOARD_BORDER	: block := BOARD_TEXT_BORDER;
-		BOARD_WIPE	: block := BOARD_TEXT_WIPE;
-		BOARD_SHADOW	: block := BOARD_TEXT_BORDER;
-		else		  block := BOARD_TEXT_PIECE;
-		end;
-		prints(BOARD_X + (x shl 1),
-		       BOARD_Y + y, pieceColor(b[o]), block);
+		blockDraw(BOARD_X + x * CELL, BOARD_Y + y * CELL, b[o]);
 		inc(o);
 	end;
 end;
@@ -149,15 +173,13 @@ end;
 
 procedure	boardClose(const b: BOARD_TYPE);	{ closing animation }
 var	y	: longint;
-	oldscr	: pchar;
 begin
-	oldscr := vscreen_activate(vscreen_vram);
 	for y := 0 to BOARD_HEIGHT-1 do
 	begin
 		sleep(32);
 		boardRowDraw(b, y);
+		lores_flip;
 	end;
-	vscreen_activate(oldscr);
 end;
 
 procedure	boardRowFill(var b: BOARD_TYPE; y, v: longint);
@@ -273,25 +295,19 @@ begin
 	pieceColor := GAME_CONFIG.scheme[p];
 end;
 
+{ a piece with its top left at pixel (x, y) }
 procedure	pieceDraw(const p: PIECE_TYPE; const m: MOVE_TYPE; x, y: longint);
-var	i, j,
-	cx, cy	: longint;
-	block	: string[2];
+var	i, j	: longint;
 begin
-	block := PIECE_TEXT;
 	for i := 0 to PIECE_SIZE-1 do
 	for j := 0 to PIECE_SIZE-1 do
-	begin
-		cx := x + i shl 1;
-		cy := y + j;
 		if p[m.piece, pieceRotate(i, j, m.rotate)] <> 0 then
-			prints(cx, cy, pieceColor(m.piece), block);
-	end;
+			blockDraw(x + i * CELL, y + j * CELL, m.piece);
 end;
 
 procedure	pieceShow(const p: PIECE_TYPE; const m: MOVE_TYPE; x, y: longint);
 begin
-	pieceDraw(p, m, BOARD_X + (x shl 1), BOARD_Y + y);
+	pieceDraw(p, m, BOARD_X + x * CELL, BOARD_Y + y * CELL);
 end;
 
 procedure	pieceLock(const p: PIECE_TYPE; var b: BOARD_TYPE; const m: MOVE_TYPE; x, y: longint);
