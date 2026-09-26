@@ -387,42 +387,21 @@ begin
 	stateLoad := ret;
 end;
 
-{ Loads the hi-score value from the score file, returns TRUE if succeed }
+{ the table of the best scores (LIBCTLS), from 2048.HI }
 function        scoreLoad: boolean;
-var	f	: FILE;
-	ret	: boolean;
 begin
-	assign(f, FILE_SCORE);
-	{$i-}
-	reset(f, 1);
-	{$i+}
-	if ioresult = 0 then
+	scoreLoad := hiscoreLoad(FILE_SCORE, GAME_SCORES);
+	if not hiscoreValid(GAME_SCORES) or (GAME_SCORES.size = 0) then
 	begin
-		blockread(f, GAME_HISCORE, sizeof(GAME_HISCORE));
-		close(f);
-		ret := TRUE;
-	end
-	else	ret := FALSE;
-	scoreLoad := ret;
+		hiscoreInit(GAME_SCORES, 8, HS_POINTS);
+		hiscoreFill(GAME_SCORES, SCORE_NAMES, 5000, 1000);
+	end;
+	GAME_HISCORE := hiscoreBest(GAME_SCORES);
 end;
 
-{ Saves the hi-score value into the score file, returns TRUE if succeed }
 function	scoreSave: boolean;
-var	f	: FILE;
-	ret	: boolean;
 begin
-	assign(f, FILE_SCORE);
-	{$i-}
-	rewrite(f, 1);
-	{$i+}
-	if ioresult = 0 then
-	begin
-		blockwrite(f, GAME_HISCORE, sizeof(GAME_HISCORE));
-		close(f);
-		ret := TRUE;
-	end
-	else	ret := FALSE;
-	scoreSave := ret;
+	scoreSave := hiscoreSave(FILE_SCORE, GAME_SCORES);
 end;
 
 {$endif}

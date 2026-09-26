@@ -46,10 +46,16 @@ begin
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
+	if not hiscoreLoad(FILE_SCORES, GAME_SCORES) then
+	begin
+		hiscoreInit(GAME_SCORES, 5, HS_POINTS);
+		hiscoreFill(GAME_SCORES, SCORE_NAMES, 5000, 1000);
+	end;
 		if (GAME_CONFIG.speed < 1) or (GAME_CONFIG.speed > MAX_LEVELS) then
 			GAME_CONFIG.speed := APP_DEFAULT_CFG.speed;
 		if GAME_CONFIG.height > BOARD_HEIGHT - 2 then
 			GAME_CONFIG.height := APP_DEFAULT_CFG.height;
+	SND_ENABLED := GAME_CONFIG.sound;
 
 	GAME_VERSION	:= major shl 8 + minor;
 	GAME_BUILD	:= build;
@@ -78,7 +84,6 @@ begin
 	pieceInit(pieces);
 	boardInit(board, GAME_CONFIG.height);
 	markerInit(marker);
-	scoreInit;
 
 	counterReset(GAME_LEVEL);
 	counterReset(GAME_SCORE);
@@ -96,6 +101,7 @@ begin
 	counterDestroy(GAME_LINES);
 
         config_save(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG));
+	hiscoreSave(FILE_SCORES, GAME_SCORES);
 
 	ltx_timer_done;
 	ltx_done;
@@ -172,7 +178,7 @@ begin
 		counterShow(GAME_LINES);
 
 		shaded_box(PNL_HOF_X, PNL_HOF_Y, 24, 7, SHADE_WHITE, AF_LEFT, '~08[ ~0FLEADER BOARD ~08]');
-		scoreShow(PNL_HOF_X + 2, PNL_HOF_Y);
+		hiscoreDraw(GAME_SCORES, PNL_HOF_X + 2, PNL_HOF_Y + 1, 8, FALSE, 0);
 	end;
 
 	if GAME_CONFIG.next then
@@ -192,7 +198,8 @@ var	mvCurrent,
 	playSpeed,
 	lineCount,
 	speedCount,
-	pieceCount	: longint;
+	pieceCount,
+	level		: longint;
 	gameScore	: longint;
 	dropPiece,
 	gameOver,
@@ -314,8 +321,11 @@ var	mvCurrent,
 				boardMarkFull(board, marker, cy);
 
 				inc(gameScore, 5);
-				if markerSize(marker) <> 0 then
+				if markerSize(marker) = 0 then
+					snd_play(SFX_CLICK)
+				else
 				begin
+					level := counterGetValue(GAME_LEVEL);
 					counterAccum(GAME_LINES, markerSize(marker));
 					inc(gameScore, (1 shl markerSize(marker))*10*counterGetValue(GAME_LEVEL));
 					inc(lineCount, markerSize(marker));
@@ -328,6 +338,11 @@ var	mvCurrent,
 							if counterGetValue(GAME_LEVEL) = MAX_LEVELS then break;
 						end;
 						playSpeed := LEVEL_SPEED[counterGetValue(GAME_LEVEL)];
+					if (counterGetValue(GAME_LEVEL) <> level) or (markerSize(marker) = 4) then
+						snd_play(SFX_LEVEL)
+					else if markerSize(marker) > 1 then
+						snd_play(SFX_COIN)
+					else	snd_play(SFX_BLIP);
 				end;
 
 				cx := (BOARD_WIDTH - pieceWidth(pieces, mvCurrent)) shr 1;
@@ -376,10 +391,13 @@ begin
 	boardClose(board);
 
 	if gameOver and not gameAbort then
+	begin
+		snd_play(SFX_DIE);
 		info(SHADE_MAGENTA, '~0D GAME OVER! ');
+	end;
 
-	scoreSet(gameScore);
-	scoreUpdate;
+	hiscoreEnter(GAME_SCORES, gameScore, 'LEVEL ' + ltoa(counterGetValue(GAME_LEVEL)),
+		     'NEW HIGH SCORE', SHADE_WHITE);
 
 	vscreen_activate(vscreen_vram);
 
@@ -438,6 +456,7 @@ begin
         menuAppend(opt, ' '+C_ONOFF[GAME_CONFIG.cblind]+' COLOR BLIND BRICKS ', CMD_OPT_CBLIND, FALSE, nil);
 	menuAppend(opt, ' '+C_ONOFF[GAME_CONFIG.hint]  +' SHOW HINT          ', CMD_OPT_HINT, FALSE, nil);
 	menuAppend(opt, ' '+C_ONOFF[GAME_CONFIG.next]  +' SHOW NEXT PIECE    ', CMD_OPT_NEXT, FALSE, nil);
+	menuAppend(opt, ' '+C_ONOFF[GAME_CONFIG.sound] +' SOUND EFFECTS      ', CMD_OPT_SOUND, FALSE, nil);
         menuSeparator(opt);
 	menuAppend(opt, '     STARTING SPEED:  ['+lpad(itoa(GAME_CONFIG.speed), 2)+']', CMD_OPT_SPEED, FALSE, nil);
 	menuAppend(opt, '     STARTING HEIGHT: ['+lpad(itoa(GAME_CONFIG.height), 2)+']', CMD_OPT_HEIGHT, FALSE, nil);
@@ -464,6 +483,7 @@ begin
 		        menuModify(opt, CMD_OPT_CBLIND, ' '+C_ONOFF[GAME_CONFIG.cblind]+' COLOR BLIND BRICKS ', FALSE, nil);
 			menuModify(opt, CMD_OPT_HINT,   ' '+C_ONOFF[GAME_CONFIG.hint]  +' SHOW HINT          ', FALSE, nil);
 			menuModify(opt, CMD_OPT_NEXT,   ' '+C_ONOFF[GAME_CONFIG.next]  +' SHOW NEXT PIECE    ', FALSE, nil);
+			menuModify(opt, CMD_OPT_SOUND,  ' '+C_ONOFF[GAME_CONFIG.sound] +' SOUND EFFECTS      ', FALSE, nil);
                 	changed := FALSE;
                 end;
 
@@ -481,7 +501,7 @@ begin
                                 changed := TRUE;
                         end;
 		CMD_GAME_HOF:
-			scoreView;
+			hiscoreView(GAME_SCORES, 'HALL OF FAME', SHADE_WHITE, 0);
 		CMD_GAME_HELP:	gameHelp;
 		CMD_GAME_INFO:	gameAbout;
 		CMD_OPT_HINT:
@@ -520,6 +540,12 @@ begin
 				end;
 			end;
 
+		CMD_OPT_SOUND:
+			begin
+				GAME_CONFIG.sound := not GAME_CONFIG.sound;
+				SND_ENABLED := GAME_CONFIG.sound;
+				changed := TRUE;
+			end;
 		CMD_OPT_NEXT:
 			begin
 				GAME_CONFIG.next := not GAME_CONFIG.next;

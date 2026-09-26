@@ -5,6 +5,7 @@ Text Mode Game Development Library for MS-DOS, version **1.5** (build 0925).
 TMGDL is a Pascal library for 80x25 colour text-mode games and tools: direct
 screen access with clipping, virtual screens, ANSI art, boxes and dialogs, UI
 controls (menus, lists, gauges, counters, help viewer...), a millisecond timer,
+half-block pixel graphics, PC-speaker sound and music, high-score tables,
 file and configuration helpers, and a simple package (resource archive) format.
 
 Supported compilers:
@@ -43,15 +44,17 @@ Supported compilers:
 | [ASCII](#ascii-character-map) | - | Character map of the text-mode font |
 | [SCANCODE](#scancode-key-code-viewer) | - | Shows the codes of the keys pressed |
 | [VIEWBIN](#viewbin-screen-dump-viewer) | - | Shows a screen dump saved with F12 |
+| [DEMO](#demo-pixels-and-sound) | - | Half-block pixel scenes with PC-speaker music |
 
 ## Library
 
 | Unit | Contents |
 | --- | --- |
-| `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, boxes, dialogs, keyboard, millisecond timer |
-| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, colored log view, [forms](#forms) |
+| `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, [half-block pixels](#half-block-pixels), boxes, dialogs, keyboard, millisecond timer |
+| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, colored log view, [forms](#forms), [high-score tables](#high-score-tables) |
 | `LIBUTIL` | Files, folders, drives, configuration and text files, CRC32, message boxes |
 | `LIBPACK` | Package (resource archive) files: create, extract, read into memory, add, delete, verify, self-extractors |
+| `LIBSND` | [PC-speaker sound](#pc-speaker-sound): tones, sound effects and background music |
 | `LIBTMGD` | Uses all of the above, plus version and compiler information |
 
 ### Forms
@@ -101,6 +104,84 @@ formDestroy(f);
 PM's *Create installer package* dialog and the installer's destination dialog
 are built with it.
 
+### Half-block pixels
+
+`LIBTEXT` can draw with the half-block characters (codes 223, 220 and 219):
+every text cell holds two pixels, one above the other, which makes an
+80 x 50 screen of 16-colour square pixels (`PIXEL_W` x `PIXEL_H`). The pixels
+are drawn on the active screen, so they are clipped like the rest and can go
+to a virtual screen and be flipped at once, without flicker. Text can be
+printed over them.
+
+```pascal
+pixel_clear(0);
+pixel_line(0, 0, PIXEL_W - 1, PIXEL_H - 1, 14);
+pixel_rect(10, 5, 30, 20, 12);          { outline }
+pixel_bar(50, 5, 20, 10, 9);            { filled  }
+pixel_circle(40, 25, 12, 10);
+pixel_disc(40, 25, 5, 15);
+pixel_set(1, 1, 4);
+if pixel_get(1, 1) = 4 then ...
+```
+
+### PC-speaker sound
+
+`LIBSND` plays tones and music on the PC speaker. `snd_play` starts a tune in
+the background and returns at once: the notes go on while the game runs, as
+`LIBTEXT` calls the sound unit whenever the program waits (in `sleep`,
+`ltx_idle` and while waiting for a key). Tunes are written in the music
+language of BASIC's `PLAY`:
+
+| Command | Meaning |
+| --- | --- |
+| `A`..`G` | A note, `#`/`+` sharp, `-` flat, then an optional length and dots (`C8.`) |
+| `N`n | Note number n (1-84, 0 is a rest) |
+| `O`n, `<`, `>` | Octave (0-6), one down, one up |
+| `L`n | Default length: 1 whole, 4 quarter... 64 |
+| `T`n | Tempo, quarter notes a minute (32-255) |
+| `P`n, `R`n | A rest |
+| `MS`, `MN`, `ML` | Staccato, normal, legato |
+
+Ready-made effects: `SFX_CLICK`, `SFX_BLIP`, `SFX_COIN`, `SFX_HIT`,
+`SFX_JUMP`, `SFX_FALL`, `SFX_BOOM`, `SFX_DIE`, `SFX_LEVEL`, `SFX_WIN` and
+`SFX_ERROR`. `SND_ENABLED := FALSE` turns all sound off (the games keep it as
+an option), and the speaker is always silenced when the program ends.
+
+```pascal
+uses libtext, libsnd;
+
+snd_play(SFX_COIN);                     { in the background }
+snd_play_wait('T120 L8 O4 CDEF G4 G4'); { waits for the end }
+snd_beep(880, 100);                     { a plain tone      }
+if snd_playing then snd_stop;
+```
+
+### High-score tables
+
+`LIBCTLS` keeps the best results of a game in a `HISCORE_TABLE`: up to ten
+names with a score (the most points win) or a time in seconds (`HS_TIME`, the
+least wins), each with a line of information such as the level reached. The
+games keep them in `.HI` files. `hiscoreEnter` adds a result to the table if
+it is good enough and asks for the name in its row, offering the name typed
+last; `hiscoreView` shows the table with a row highlighted, and
+`hiscoreDraw` draws it anywhere, such as a side panel.
+
+```pascal
+if not hiscoreLoad('GAME.HI', scores) then
+begin
+  hiscoreInit(scores, 5, HS_POINTS);
+  hiscoreFill(scores, 'ANNA|BOB|CARL', 5000, 1000);  { 5000, 4000, 3000 }
+end;
+...
+rank := hiscoreEnter(scores, points, 'LEVEL 4', 'NEW HIGH SCORE', SHADE_GREEN);
+hiscoreView(scores, 'HALL OF FAME', SHADE_BLUE, rank);
+hiscoreSave('GAME.HI', scores);
+```
+
+Every game with a leader board uses it: 2048, Arkanoid, Chomp, Dungeon,
+Minesweeper (the best times of each level), Runner, Snake, Solitaire and
+Tetris.
+
 ## Building
 
 Build settings live in `SRC/MACROS`, shared by every makefile:
@@ -127,8 +208,7 @@ BUILD FPC        (or: make -DUSE_FPC)
 make -DUSE_FPC install
 ```
 
-Makefiles with a game or tool: `GAMES\2048`, `GAMES\ARKANOID`, `GAMES\CHOMP`, `GAMES\GOL`,
-`GAMES\GOMOKU`, `GAMES\SNAKE`, `GAMES\SOKOBAN`, `GAMES\T3`, `GAMES\TETRIS`, `TOOLS` (ASCII, SCANCODE, VIEWBIN),
+Every game folder under `GAMES` has a makefile, as do `TOOLS` (ASCII, SCANCODE, VIEWBIN, DEMO),
 `TOOLS\PCKMGR` (PM, PCK, SFX) and `TOOLS\INSTALL`. Programs built with Free
 Pascal need `CWSDPMI.EXE` (in `%FPCROOT%\BIN\GO32V2`) in the same folder or on
 the `PATH`.
@@ -146,9 +226,9 @@ and Sokoban ship as source only: run `BUILD` in their folders.
 
 ### 2048
 
-Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. Tiles slide with an animation, the game is saved on exit and resumed next time, and the best score is kept.
+Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. Tiles slide with an animation, the game is saved on exit and resumed next time, and the eight best scores are kept.
 
-Keys: `W` `A` `S` `D` slide, `R` new game, `?` help, `!` about, `ESC` quit.
+Keys: `W` `A` `S` `D` slide, `R` new game, `H` high scores, `?` help, `!` about, `ESC` quit.
 
 Folder: [`GAMES/2048`](./GAMES/2048)
 
@@ -158,7 +238,7 @@ Folder: [`GAMES/2048`](./GAMES/2048)
 
 ### Arkanoid
 
-Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds.
+Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds and sound effects.
 
 Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
 
@@ -170,7 +250,7 @@ Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 
 ### Chomp
 
-A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board.
+A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels, sound effects and a leader board.
 
 Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
 
@@ -220,7 +300,7 @@ Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
 
 ### Minesweeper
 
-Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The best time of each level is kept.
+Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The five best times of each level are kept, with the players' names.
 
 Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` open, `F` flag, `N` new game, `H` help, `?` about, `ESC` quit.
 
@@ -244,7 +324,7 @@ Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
 
 ### Runner
 
-A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else.
+A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Sound effects and a leader board.
 
 Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
 
@@ -256,7 +336,7 @@ Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
 
 ### Snake
 
-Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, and an option to go through the edges.
+Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, sound effects and a leader board.
 
 Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
 
@@ -280,7 +360,7 @@ Folder: [`GAMES/SOKOBAN`](./GAMES/SOKOBAN)
 
 ### Solitaire
 
-Klondike patience with 7 x 4 text-mode cards: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
+Klondike patience with 7 x 4 text-mode cards: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, high scores, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
 
 Keys: arrows move, `UP` in a pile takes more cards, `SPACE` pick up/put down, `ENTER` best place, `D` draw, `A` all possible cards up, `U` undo, `N` new deal, `H` help, `ESC` menu.
 
@@ -292,7 +372,7 @@ Folder: [`GAMES/SOLITAIR`](./GAMES/SOLITAIR)
 
 ### Tetris
 
-Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode and a leader board.
+Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode, sound effects and a leader board.
 
 Keys: `A` `S` `D` move, `W`/`Q` spin, `SPACE` drop (or arrows, `/` and `ENTER`), `H` hint, `B` colour-blind, `P` pause, `ESC` quit.
 
@@ -415,6 +495,17 @@ Folder: [`TOOLS`](./TOOLS)
 
 ![](./TOOLS/VIEWBIN.GIF)
 
+### DEMO (pixels and sound)
+
+Shows what `LIBTEXT`'s half-block pixels and `LIBSND` can do: bouncing
+lines, balls, a plasma and rings drawn on an 80 x 50 pixel screen, on a
+virtual screen flipped every frame, while a tune plays on the PC speaker.
+`SPACE` goes to the next scene, `M` turns the music on or off, `ESC` quits.
+
+Folder: [`TOOLS`](./TOOLS)
+
+![](./TOOLS/DEMO.GIF)
+
 ## What's new in 1.5
 
 - Screen output is clipped to the screen, and dialogs, boxes and menus fit on
@@ -431,6 +522,15 @@ Folder: [`TOOLS`](./TOOLS)
   `~XY` color codes.
 - Ten new games: Arkanoid, Chomp, Dungeon, Gomoku, Minesweeper, Reversi, Runner,
   Snake, Sokoban and Solitaire.
+- Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
+  lines, rectangles and circles.
+- `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
+  the language of BASIC's `PLAY`, played in the background. Arkanoid, Chomp,
+  Runner, Snake and Tetris have sound effects, with an option to turn them off.
+- High-score tables in `LIBCTLS`, shared by all the games instead of each
+  keeping its own; the scores are kept in `.HI` files (older scores and saved
+  settings are reset once).
+- DEMO, a tool that shows the pixels and the music.
 
 ## Known issues
 

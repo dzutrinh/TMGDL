@@ -52,4 +52,6 @@ menu. The keys are as follows.
  ~0E* ~0FToggle color-blind mode~08 . ~0CB
  ~0E* ~0FQuit game~08 . . . . . . . . ~0CESC
 
-By default, the scheme ~03W~09A~0DD~0CS~07 is used.
+By default, the scheme ~03W~09A~0DD~0CS~07 is used. The
+~04Options~07 menu also turns the sound effects on or
+off.

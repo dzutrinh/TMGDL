@@ -36,10 +36,6 @@ procedure	markerReset  (var mk: MARKER_TYPE);								forward;
 function	markerSize   (const mk: MARKER_TYPE): longint;							forward;
 function	markerGet    (const mk: MARKER_TYPE; idx: longint): byte;					forward;
 
-{ score management }
-procedure	scoreShow(x, y: integer);									forward;
-procedure	scoreView;                                                                                      forward;
-procedure	scoreUpdate;	                                                           			forward;
 
 { ////////////////////////////////////////////////////////////////////////// }
 
@@ -357,104 +353,6 @@ begin
 	else	markerGet := 0;
 end;
 
-const	player	: SCORE_ENTRY = (name: ''; score: 0);
-
-procedure	scoreInit;
-begin
-	player.name := '';
-	player.score := 0;
-end;
-
-procedure	scoreSet(value: longint);
-begin
-	player.score := value;
-end;
-
-function	scoreRank(const player: SCORE_ENTRY): integer;
-var	i	: integer;
-begin
-	i := 1;
-        {$R-}
-	while (i <= MAX_SCORE_TABLE) and
-	      (player.score <= GAME_CONFIG.scores[i].score) do inc(i);
-        {$R+}
-	if i <= MAX_SCORE_TABLE then
-		scoreRank := i
-	else	scoreRank := 0;
-end;
-
-procedure	scoreAdd(rank: integer; player: SCORE_ENTRY);
-begin
-	if (rank > 0) and (rank <= MAX_SCORE_TABLE) then
-	begin
-		GAME_CONFIG.scores[rank].name := toupper(player.name);
-		GAME_CONFIG.scores[rank].score := player.score;
-	end;
-end;
-
-{ empty high-score slots are shown as '-' }
-function	scoreText(score: longint): string;
-begin
-	if score = 0 then scoreText := '-' else scoreText := ltoa(score);
-end;
-
-procedure	scoreShow(x, y: integer);
-var	i	: integer;
-begin
-	for i := 1 to MAX_SCORE_TABLE do
-	begin
-		print(x, y+i,
-		      '~01' + itoa(i) + ' ~09' +
-		      rpad(GAME_CONFIG.scores[i].name, 8) + ' ~0B' +
-		      lpad(scoreText(GAME_CONFIG.scores[i].score), 8));
-	end;
-end;
-
-procedure	scoreView;
-var	x, y,
-	w, h	: integer;
-        dlg	: PDIALOG;
-begin
-	w := 30;	h := 9;
-        x := -1;	y := -1;
-	ltx_validate_rect(x, y, w, h);
-        y := y + 7;
-        dlg := dialog_open(x, y, w, h, SHADE_WHITE, '~08[ ~0FLEADER BOARD ~08]', '');
-	scoreShow(x + 6, y + 1);
-	wait([#27, #13]);
-        dialog_close(dlg);
-end;
-
-procedure	scoreUpdate;
-var	x, y,
-	py, w, h: integer;
-        dlg	: PDIALOG;
-        oldscr	: SCREEN;
-begin
-	player.score := counterGetValue(GAME_SCORE);
-	py := scoreRank(player);
-	if py = 0 then exit;
-
-	w := 25;
-	h := 9;
-	x := ltx_centerx(w);
-	y := ltx_centery(h);
-
-        oldscr := vscreen_activate(vscreen_vram);
-        dlg := dialog_open(x, y, w, h, SHADE_WHITE,
-			   '~08[ ~0FNEW HIGH SCORE ~08]', '');
-	scoreShow(x + 3, y + 1);
-	print(x + 3, y+py+1,
-	      '~01' + itoa(py) + ' ~09' +
-	      rpad('', 8) + ' ~0B' +
-	      lpad(ltoa(player.score), 8));
-	if input(x + 5, y + py + 1, 8, $3F, player.name) then
-		scoreAdd(py, player);
-
-	scoreShow(x + 3, y);
-        dialog_close(dlg);
-        vscreen_activate(oldscr);
-end;
 
 {$endif}
 

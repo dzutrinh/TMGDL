@@ -40,7 +40,8 @@ const   GAME_WINCOND	: longint = 11;
 	GAME_HISCORE	: longint = 500;
 	GAME_MOVES	: longint = 0;
         FILE_HELP	: string[13] = '2048.HLP';
-	FILE_SCORE	: string[13] = '2048.SCR';
+	FILE_SCORE	: string[13] = '2048.HI';
+	SCORE_NAMES	= 'GABRIELE|TWO|FOUR|EIGHT|SIXTEEN';
 	FILE_SAVE	: string[13] = '2048.SAV';
 	CELL_COLORS  	: array[0..16] of byte =
 			($80, $70,
@@ -56,5 +57,7 @@ const
 	INFO_SCORE	= 13;
 	INFO_HISCORE	= 16;
 	INFO_MOVES	= 19;
+
+var	GAME_SCORES	: HISCORE_TABLE;		{ the best scores, in 2048.HI }
 
 {$endif}

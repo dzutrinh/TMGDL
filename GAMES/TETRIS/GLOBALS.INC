@@ -13,8 +13,6 @@ const	BOARD_WIDTH	= 12;
 	PIECE_SIZE	= 4;	{ size of each piece }
 	PIECE_MAX	= 7;	{ maximum 7 piece types }
 	PIECE_TEXT	: PIECE_SHAPE = #219#219;
-
-	MAX_SCORE_TABLE = 5;
 	MAX_LEVELS	= 10;
 
         BOARD_BLANK	= 0;
@@ -63,12 +61,6 @@ type	TETROMINO	= array[0..PIECE_SIZE*PIECE_SIZE-1] of byte;
 
 	CPAL_TYPE	= array[BOARD_BLANK..BOARD_BORDER] of byte;
 
-	SCORE_ENTRY	= record
-		name	: string[8];
-		score	: longint;
-	end;
-	SCORE_TABLE	= array[1..MAX_SCORE_TABLE] of SCORE_ENTRY;
-
         { for storing configuration }
         APP_CONFIG	= record
         	control	: KEY_SELECTOR;		{ keyboard mapper  }
@@ -78,7 +70,7 @@ type	TETROMINO	= array[0..PIECE_SIZE*PIECE_SIZE-1] of byte;
                 height	: word;			{ starting height  }
                 cblind	: boolean;		{ color scheme     }
                 scheme	: CPAL_TYPE;
-                scores	: SCORE_TABLE;		{ high-score table }
+                sound	: boolean;		{ sound effects    }
         end;
 
 {////////////////////////////////////////////////////////////////////////////}
@@ -189,6 +181,7 @@ const	PNL_NEXT_X	= 55;
 	CMD_OPT_HINT	= 1103;
 	CMD_OPT_NEXT	= 1104;
 	CMD_OPT_CONTROL	= 1105;
+	CMD_OPT_SOUND	= 1106;
 
 	CMD_CTRLS_ARROWS= 2001;
 	CMD_CTRLS_WASD	= 2002;
@@ -197,6 +190,8 @@ const	PNL_NEXT_X	= 55;
 
 	FILE_CONFIG	: string[12] = 'TETRIS.CNF';
 	FILE_HELP	: string[12] = 'TETRIS.HLP';
+	FILE_SCORES	: string[12] = 'TETRIS.HI';
+	SCORE_NAMES	= 'STEVE|KACEY|JOSH|CHRIS|MIRANDA';
 	FILE_SNAPSHOT	: string[12] = 'TETRIS.BIN';
 
 	MENU_TEXT_CLR	: byte = $07;
@@ -249,13 +244,11 @@ const	PNL_NEXT_X	= 55;
                  height	: 0;		{ number of pre-generated rows }
 		 cblind : FALSE;	{ color blind mode             }
                  { default color scheme }
-                 scheme	: ($08, $0B, $0C, $0E, $0D, $0A, $06, $09, $0F, $08, $07);		 { default score table }
-		 scores	: ((name: 'STEVE'  ; score: 5000),
-		    	   (name: 'KACEY'  ; score: 4000),
-			   (name: 'JOSH'   ; score: 3000),
-			   (name: 'CHRIS'  ; score: 2000),
-			   (name: 'MIRANDA'; score: 1000)));
+                 scheme	: ($08, $0B, $0C, $0E, $0D, $0A, $06, $09, $0F, $08, $07);
+                 sound	: TRUE);
 
 var	GAME_CONFIG	: APP_CONFIG;
+
+var	GAME_SCORES	: HISCORE_TABLE;		{ the best scores, in TETRIS.HI }
 
 {$endif}

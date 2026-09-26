@@ -70,7 +70,7 @@ begin
 
 	prints(72, 25, $08, 'v' + vtos(GAME_VERSION, GAME_BUILD));
 
-	shaded_box(HELP_X, HELP_Y, 16, 10, SHADE_WHITE, AF_LEFT, '~0FCONTROL');
+	shaded_box(HELP_X, HELP_Y, 16, 11, SHADE_WHITE, AF_LEFT, '~0FCONTROL');
 	print(HELP_X+2, HELP_Y+1, '~08.   ~0AW ~02UP   ');
 	print(HELP_X+2, HELP_Y+2, '~07.   ~0AS ~02DOWN ');
 	print(HELP_X+2, HELP_Y+3, '~0F.   ~0AA ~02LEFT ');
@@ -78,7 +78,8 @@ begin
 	print(HELP_X+2, HELP_Y+5, '~07.   ~0ER ~06RESET');
 	print(HELP_X+2, HELP_Y+6, '~07.   ~0E? ~06HELP');
 	print(HELP_X+2, HELP_Y+7, '~07.   ~0E! ~06ABOUT');
-	print(HELP_X+2, HELP_Y+8, '~07. ~0CESC ~04QUIT ');
+	print(HELP_X+2, HELP_Y+8, '~07.   ~0EH ~06SCORES');
+	print(HELP_X+2, HELP_Y+9, '~07. ~0CESC ~04QUIT ');
 
 	counterShow(cScore);
 	counterShow(cHiScore);
@@ -143,6 +144,20 @@ begin
 	gameDemo := (ch = KEY_ENTER) or (ch = KEY_SPACE);
 end;
 
+{ a score good enough goes in the table of the best scores }
+procedure	gameRecord;
+var	i, j, best	: longint;
+begin
+	if hiscoreRank(GAME_SCORES, GAME_SCORE) = 0 then exit;
+	best := 0;
+	for j := 0 to BOARD_DIM - 1 do
+		for i := 0 to BOARD_DIM - 1 do
+			if board[j][i] > best then best := board[j][i];
+	hiscoreEnter(GAME_SCORES, GAME_SCORE, 'BEST TILE ' + ltoa(longint(1) shl best), 'NEW HIGH SCORE', SHADE_RED);
+	scoreSave;
+	gameLogo;
+end;
+
 procedure       gamePlay;
 var	c       : char;
 	quit,
@@ -159,7 +174,7 @@ begin
 	else	stateRestart(board);
 	repeat
 		gameUpdate;
-		c := wait(['W','A','S','D','R',#27,'?','!']);
+		c := wait(['W','A','S','D','R','H',#27,'?','!']);
 		gameUpdate;
 		next := FALSE;
 		case c of
@@ -170,6 +185,7 @@ begin
 			end;
 		'R':	if query(SHADE_CYAN, '~03START A NEW GAME (~0FY~03/~0FN~03) ?') then
 			begin
+				gameRecord;
 				stateRestart(board);
 				scoreSave;
 				next := FALSE;
@@ -183,6 +199,7 @@ begin
                                 next := FALSE;
                 	end;
                 '!':    gameAbout;
+		'H':	hiscoreView(GAME_SCORES, 'HIGH SCORES', SHADE_RED, 0);
 		end;
 		if next then
 		begin
@@ -193,6 +210,7 @@ begin
 			if stateCheckWin(board) then
 			begin
 				info(SHADE_GREEN, '~02!! ~0AYOU WIN ~02!!');
+				gameRecord;
 				stateRestart(board);
 				next := FALSE;
 			end
@@ -200,6 +218,7 @@ begin
 			if stateCheckOver(board) then
 			begin
 				info(SHADE_YELLOW, '~06!! ~0EGAME OVER~06 !!');
+				gameRecord;
 				stateRestart(board);
 				next := FALSE;
 			end;
