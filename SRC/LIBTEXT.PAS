@@ -427,7 +427,8 @@ procedure	pixel_disc  (cx, cy, r: integer; color: byte);
 { half block: its background is the left pixel, its foreground the right  }
 { one. EGA/VGA only; an EGA shows rows of 3 scan lines. Drawing goes to a  }
 { buffer that lores_flip copies to the screen. The text API does not work  }
-{ in this mode: call lores_done before dialogs, then redraw the screen     }
+{ in this mode: lores_suspend goes back to text for a while (dialogs, help) }
+{ and lores_resume brings the pixels back; lores_ask asks on the canvas    }
 
 const	LORES_W		= 160;
 	LORES_H		= 100;
@@ -442,6 +443,12 @@ procedure	lores_bar  (x, y, w, h: integer; color: byte);
 procedure	lores_text (x, y: integer; s: string; color: byte);	{ 3 x 5 font }
 function	lores_text_width(const s: string): integer;
 procedure	lores_flip;
+procedure	lores_line (x0, y0, x1, y1: integer; color: byte);
+procedure	lores_rect (x, y, w, h: integer; color: byte);
+procedure	lores_disc (cx, cy, r: integer; color: byte);
+procedure	lores_suspend;			{ text mode, the canvas kept  }
+procedure	lores_resume;
+function	lores_ask  (text, keys: string): char;	{ a box, one of the keys }
 
 { //////////////////////////// DIALOG BOX API ////////////////////////////// }
 
@@ -1842,19 +1849,16 @@ begin
 	lores_active := LORES_BUF <> nil;
 end;
 
-function	lores_init: boolean;
-var	card,
-	v	: byte;
+const	LORES_CARD	: byte = 0;
+	LORES_OFF	: boolean = FALSE;	{ suspended            }
+
+{ the text mode, tweaked to 100 rows }
+procedure	lores_mode;
+var	v	: byte;
 	i	: word;
+	card	: byte;
 begin
-	lores_init := FALSE;
-	card := lores_adapter;
-	if card = 0 then exit;
-	if LORES_BUF = nil then
-	begin
-		LORES_BUF := ltx_malloc(LORES_SIZE);
-		if LORES_BUF = nil then exit;
-	end;
+	card := LORES_CARD;
 	ltx_setmode(CO80);
 	if card = 8 then
 	begin
@@ -1873,11 +1877,6 @@ begin
 	outportb($3D5, (inportb($3D5) and $E0) or v);		{ rows of v+1 lines }
 	cursor(CURSOR_OFF);
 	blink(BLINK_OFF);
-	for i := 0 to LORES_SIZE div 2 - 1 do
-	begin
-		LORES_BUF^[i shl 1] := 222;
-		LORES_BUF^[i shl 1 + 1] := 0;
-	end;
 	{ blank what lies past the 100 rows too }
 	for i := 0 to LORES_BLANK div 2 - 1 do
 {$ifndef FPC}
@@ -1885,6 +1884,26 @@ begin
 {$else}
 		MEMW[VSEG_ADDR:i shl 1] := 222;
 {$endif}
+	LORES_OFF := FALSE;
+end;
+
+function	lores_init: boolean;
+var	i	: word;
+begin
+	lores_init := FALSE;
+	LORES_CARD := lores_adapter;
+	if LORES_CARD = 0 then exit;
+	if LORES_BUF = nil then
+	begin
+		LORES_BUF := ltx_malloc(LORES_SIZE);
+		if LORES_BUF = nil then exit;
+	end;
+	for i := 0 to LORES_SIZE div 2 - 1 do
+	begin
+		LORES_BUF^[i shl 1] := 222;
+		LORES_BUF^[i shl 1 + 1] := 0;
+	end;
+	lores_mode;
 	lores_init := TRUE;
 end;
 
@@ -1893,7 +1912,19 @@ begin
 	if LORES_BUF = nil then exit;
 	ltx_free(LORES_BUF);
 	LORES_BUF := nil;
+	LORES_OFF := FALSE;
 	ltx_setmode(CO80);
+	cursor(CURSOR_OFF);
+	blink(BLINK_OFF);
+end;
+
+procedure	lores_suspend;
+begin
+	if (LORES_BUF = nil) or LORES_OFF then exit;
+	ltx_setmode(CO80);
+	cursor(CURSOR_OFF);
+	blink(BLINK_OFF);
+	LORES_OFF := TRUE;
 end;
 
 procedure	lores_clear(color: byte);
@@ -1956,14 +1987,83 @@ begin
 	if s = '' then lores_text_width := 0 else lores_text_width := length(s) * 4 - 1;
 end;
 
+procedure	lores_line(x0, y0, x1, y1: integer; color: byte);
+var	dx, dy,
+	sx, sy,
+	err, e2	: integer;
+begin
+	dx := abs(x1 - x0);
+	dy := -abs(y1 - y0);
+	if x0 < x1 then sx := 1 else sx := -1;
+	if y0 < y1 then sy := 1 else sy := -1;
+	err := dx + dy;
+	repeat
+		lores_set(x0, y0, color);
+		if (x0 = x1) and (y0 = y1) then break;
+		e2 := 2 * err;
+		if e2 >= dy then
+		begin
+			inc(err, dy);
+			inc(x0, sx);
+		end;
+		if e2 <= dx then
+		begin
+			inc(err, dx);
+			inc(y0, sy);
+		end;
+	until FALSE;
+end;
+
+procedure	lores_rect(x, y, w, h: integer; color: byte);
+begin
+	lores_bar(x, y, w, 1, color);
+	lores_bar(x, y + h - 1, w, 1, color);
+	lores_bar(x, y, 1, h, color);
+	lores_bar(x + w - 1, y, 1, h, color);
+end;
+
+procedure	lores_disc(cx, cy, r: integer; color: byte);
+var	x, y	: integer;
+begin
+	for y := -r to r do
+		for x := -r to r do
+			if x * x + y * y <= r * r + r then lores_set(cx + x, cy + y, color);
+end;
+
 procedure	lores_flip;
 begin
-	if LORES_BUF = nil then exit;
+	if (LORES_BUF = nil) or LORES_OFF then exit;
 {$ifndef FPC}
 	move(LORES_BUF^, VIDEO_RAM^, LORES_SIZE);
 {$else}
 	dosmemput(VSEG_ADDR, 0, LORES_BUF^, LORES_SIZE);
 {$endif}
+end;
+
+procedure	lores_resume;
+begin
+	if (LORES_BUF = nil) or not LORES_OFF then exit;
+	lores_mode;
+	lores_flip;
+end;
+
+{ a message in a box in the middle of the canvas, until one of the keys }
+function	lores_ask(text, keys: string): char;
+var	w, x	: integer;
+	k	: char;
+begin
+	w := lores_text_width(text) + 8;
+	x := (LORES_W - w) div 2;
+	lores_bar(x, 44, w, 11, 1);
+	lores_rect(x, 44, w, 11, 9);
+	lores_text(x + 4, 47, text, 15);
+	lores_flip;
+	while keypressed do getkey;
+	for w := 1 to length(keys) do keys[w] := upcase(keys[w]);
+	repeat
+		k := upcase(chr(getkey and $FF));
+	until pos(k, keys) > 0;
+	lores_ask := k;
 end;
 
 function	dialog_create(x, y, w, h: integer; shade: SHADING;

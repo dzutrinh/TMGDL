@@ -25,7 +25,7 @@ Supported compilers:
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
-| [Invaders](#invaders) | 1.0 | Space Invaders in half-block pixels, with shields and a saucer |
+| [Invaders](#invaders) | 1.0 | Space Invaders in 160 x 100, with shields and a saucer |
 | [Lander](#lander) | 1.0 | Lunar Lander in half-block pixels: land softly on a pad |
 | [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
 | [Pipes](#pipes) | 1.0 | Pipe Mania-style: lay a pipeline before the water comes |
@@ -142,9 +142,11 @@ background colour of a cell is its left pixel and the foreground its right
 one: 160 x 100 pixels in 16 colours (`LORES_W` x `LORES_H`). On VGA the cells
 are made 8 dots wide, so both halves are the same; an EGA shows rows of 3 scan
 lines, a little flatter. Drawing goes to a buffer that `lores_flip` shows at
-once. The text API does not work in this mode, so a program calls
-`lores_done` (back to 80 x 25 text) before its dialogs and redraws its screen.
-A 3 x 5 font writes letters, digits and signs.
+once. The text API does not work in this mode: `lores_ask` asks a question in a box
+on the canvas, and for the text dialogs (help, sliders) `lores_suspend` goes
+back to 80 x 25 text for a while, keeping the canvas, and `lores_resume` brings
+it back. `lores_done` ends the mode. There are lines, rectangles, bars and
+discs, and a 3 x 5 font writes letters, digits and signs.
 
 ```pascal
 if not lores_init then die(-1, 'EGA/VGA adapter is required.');
@@ -152,7 +154,10 @@ lores_clear(0);
 lores_bar(10, 10, 20, 5, 12);
 lores_set(80, 50, 15);
 lores_text(2, 2, 'SCORE 1200', 14);     { 4 pixels a character }
+lores_line(0, 99, 159, 60, 10);
 lores_flip;
+if lores_ask('QUIT? Y/N', 'YN') = 'Y' then ...
+lores_suspend; gameHelp; lores_resume;  { a text dialog in between }
 ...
 lores_done;
 ```
@@ -348,7 +353,7 @@ Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
 
 ### Invaders
 
-Rows of invaders march across the sky and step down each time they reach a side; the fewer are left, the faster they go. Shoot them all before they land, hiding under four shields that crumble under every shot and bomb. A mystery saucer flies by now and then, and every wave starts a little lower. Drawn in 80 x 50 half-block pixels, with the classic four-note march on the PC speaker.
+Rows of invaders march across the sky and step down each time they reach a side; the fewer are left, the faster they go. Shoot them all before they land, hiding under four shields that crumble under every shot and bomb. A mystery saucer flies by now and then, and every wave starts a little lower. Drawn in the [160 x 100 mode](#low-res-160-x-100-mode), with the classic four-note march on the PC speaker.
 
 Keys: arrows or `A` `D` move (held keys glide), `SPACE`/`Up` fire, `P` pause, `H` help, `ESC` quit.
 
