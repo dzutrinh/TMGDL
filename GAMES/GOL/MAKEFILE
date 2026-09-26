@@ -1,45 +1,50 @@
 #
-# Makefile for 'GAME OF LIFE' game and its utility
-# 
+# Makefile for the 'GAME OF LIFE' game (TMGDL 1.5)
+#
+#   make            build the game (the compiler is selected in MACROS)
+#   make install    copy the game to $(BINDIR)
+#   make clean      remove the compiled files
+#
+#   make patterns.exe   build PATTERNS, which turns PATTERNS.TXT into
+#                       PATTERNS.INC
+#
+# Build and install the library first (SRC\BUILD). TMT Pascal is used
+# unless 'make' is given -DUSE_BPC or -DUSE_FPC, which BUILD.BAT does with
+# 'BUILD BPC' or 'BUILD FPC'.
+#
 !include "../../src/macros"
 
-PROJECT=GOL
-SOURCE=$(PROJECT).pas
-BINARY=$(PROJECT).exe
-UTILITY=PATTERNS
-GENSRC=$(UTILITY).PAS
-GENBIN=$(UTILITY).exe
-INCLUDE=backgd.inc \
-	globals.inc \
+INCLUDE=globals.inc \
 	engine.inc \
 	game.inc \
-	patterns.inc \
+	backgd.inc \
+	patterns.inc
 
-all:	$(BINARY)
-	
-$(BINARY): $(SOURCE) $(INCLUDE)
-	@$(PC) $(LFLAGS) $(SOURCE)
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+all:	gol.exe
 
-$(GENBIN): $(GENSRC)
-	@$(PC) $(LFLAGS) $(GENSRC)
-	@if exist $(UTILITY).o   $(RM) $(UTILITY).o
-	@if exist $(UTILITY).fpd $(RM) $(UTILITY).fpd
-	@if exist $(UTILITY).sym $(RM) $(UTILITY).sym
+gol.exe: gol.pas $(INCLUDE)
+	@$(PC) $(LFLAGS) gol.pas
+	@if exist gol.o   $(RM) gol.o
+	@if exist gol.fpd $(RM) gol.fpd
+	@if exist gol.sym $(RM) gol.sym
 
-clean:	
-	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-	@if exist $(UTILITY).exe $(RM) $(UTILITY).exe
-	@if exist $(UTILITY).o   $(RM) $(UTILITY).o
-	@if exist $(UTILITY).fpd $(RM) $(UTILITY).fpd
-	@if exist $(UTILITY).sym $(RM) $(UTILITY).sym
+patterns.exe: patterns.pas
+	@$(PC) $(LFLAGS) patterns.pas
+	@if exist patterns.o   $(RM) patterns.o
+	@if exist patterns.fpd $(RM) patterns.fpd
+	@if exist patterns.sym $(RM) patterns.sym
 
-install:
-	$(MD) ..\..\BIN
-	$(CP) $(BINARY) ..\..\BIN
-	$(CP) $(PROJECT).HLP ..\..\BIN\
+install: gol.exe
+	@if not exist $(BINDIR)\NUL $(MD) $(BINDIR)
+	$(CP) gol.exe $(BINDIR)
+	$(CP) gol.hlp $(BINDIR)
+
+clean:
+	@if exist gol.exe $(RM) gol.exe
+	@if exist gol.o   $(RM) gol.o
+	@if exist gol.fpd $(RM) gol.fpd
+	@if exist gol.sym $(RM) gol.sym
+	@if exist patterns.exe $(RM) patterns.exe
+	@if exist patterns.o   $(RM) patterns.o
+	@if exist patterns.fpd $(RM) patterns.fpd
+	@if exist patterns.sym $(RM) patterns.sym

@@ -28,10 +28,15 @@ Supported compilers:
 Build settings live in `SRC/MACROS`, shared by every makefile:
 
 - `LIBROOT`/`LIBDIR`: where the compiled units are installed (default `\TMGDL\TEXTMODE\LIB`)
+- `BINDIR`: where `make install` copies the games and tools (default `\TMGDL\TEXTMODE\BIN`)
 - `TMTROOT`, `TP7ROOT`, `FPCROOT`: compiler locations
 - `RM`, `CP`, `MV`, `MD`: file commands used by the makefiles
 
-Build and install the library first, then any game or tool:
+Every makefile works with the three compilers: TMT Pascal by default, or
+Borland Pascal / Free Pascal with `make -DUSE_BPC` / `make -DUSE_FPC`. Each
+folder also has a `BUILD.BAT` that takes the compiler as its argument, cleans
+and rebuilds. Build and install the library first, then any game or tool,
+with the same compiler:
 
 ```
 cd SRC
@@ -40,8 +45,15 @@ BUILD BPC        (Borland Pascal)
 BUILD FPC        (Free Pascal)
 
 cd ..\GAMES\2048
-make             (or: make -DUSE_BPC / make -DUSE_FPC)
+BUILD FPC        (or: make -DUSE_FPC)
+make -DUSE_FPC install
 ```
+
+Makefiles with a game or tool: `GAMES\2048`, `GAMES\ARKANOID`, `GAMES\GOL`,
+`GAMES\T3`, `GAMES\TETRIS`, `TOOLS` (ASCII, SCANCODE, VIEWBIN),
+`TOOLS\PCKMGR` (PM, PCK, SFX) and `TOOLS\INSTALL`. Programs built with Free
+Pascal need `CWSDPMI.EXE` (in `%FPCROOT%\BIN\GO32V2`) in the same folder or on
+the `PATH`.
 
 `make clean` in `SRC` removes the installed units. After updating TMGDL, run
 `SRC\BUILD.BAT` again and remove any old copies of the units elsewhere in the
@@ -49,7 +61,7 @@ compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
 The executables stored in the game folders come from earlier releases; rebuild
-them to get the versions below. Arkanoid ships as source only: run `make` in
+them to get the versions below. Arkanoid ships as source only: run `BUILD` in
 `GAMES\ARKANOID`.
 
 ## Games

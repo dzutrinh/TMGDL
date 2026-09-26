@@ -1,31 +1,36 @@
 #
-# Makefile for 'TIC-TAC-TOE' game
+# Makefile for the 'TIC-TAC-TOE' game (TMGDL 1.5)
+#
+#   make            build the game (the compiler is selected in MACROS)
+#   make install    copy the game to $(BINDIR)
+#   make clean      remove the compiled files
+#
+# Build and install the library first (SRC\BUILD). TMT Pascal is used
+# unless 'make' is given -DUSE_BPC or -DUSE_FPC, which BUILD.BAT does with
+# 'BUILD BPC' or 'BUILD FPC'.
 #
 !include "../../src/macros"
 
-PROJECT=T3
-SOURCE=$(PROJECT).pas
-BINARY=$(PROJECT).exe
-INCLUDE=engine.inc \
+INCLUDE=globals.inc \
+	engine.inc \
 	game.inc \
-	globals.inc \
 	backgd.inc
 
-all:	$(BINARY)
-	
-$(BINARY): $(SOURCE) $(INCLUDE)
-	@$(PC) $(LFLAGS) $(SOURCE)
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+all:	t3.exe
 
-clean:	
-	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+t3.exe: t3.pas $(INCLUDE)
+	@$(PC) $(LFLAGS) t3.pas
+	@if exist t3.o   $(RM) t3.o
+	@if exist t3.fpd $(RM) t3.fpd
+	@if exist t3.sym $(RM) t3.sym
 
-install:
-	$(MD) ..\..\BIN
-	$(CP) $(BINARY) ..\..\BIN
-	$(CP) $(PROJECT).HLP ..\..\BIN
+install: t3.exe
+	@if not exist $(BINDIR)\NUL $(MD) $(BINDIR)
+	$(CP) t3.exe $(BINDIR)
+	$(CP) t3.hlp $(BINDIR)
+
+clean:
+	@if exist t3.exe $(RM) t3.exe
+	@if exist t3.o   $(RM) t3.o
+	@if exist t3.fpd $(RM) t3.fpd
+	@if exist t3.sym $(RM) t3.sym

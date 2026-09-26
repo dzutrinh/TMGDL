@@ -1,32 +1,36 @@
 #
-# Makefile for 'TETRIS' game
+# Makefile for the 'TETRIS' game (TMGDL 1.5)
+#
+#   make            build the game (the compiler is selected in MACROS)
+#   make install    copy the game to $(BINDIR)
+#   make clean      remove the compiled files
+#
+# Build and install the library first (SRC\BUILD). TMT Pascal is used
+# unless 'make' is given -DUSE_BPC or -DUSE_FPC, which BUILD.BAT does with
+# 'BUILD BPC' or 'BUILD FPC'.
 #
 !include "../../src/macros"
 
-PROJECT=TETRIS
-SOURCE=$(PROJECT).pas
-BINARY=$(PROJECT).exe
 INCLUDE=globals.inc \
 	engine.inc \
-	backgd.inc \
-	game.inc
+	game.inc \
+	backgd.inc
 
-all:	$(BINARY)
-	
-$(BINARY): $(SOURCE) $(INCLUDE)
-	@$(PC) $(LFLAGS) $(SOURCE)
-#	@$(UPX) -9 $(BINARY)
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+all:	tetris.exe
+
+tetris.exe: tetris.pas $(INCLUDE)
+	@$(PC) $(LFLAGS) tetris.pas
+	@if exist tetris.o   $(RM) tetris.o
+	@if exist tetris.fpd $(RM) tetris.fpd
+	@if exist tetris.sym $(RM) tetris.sym
+
+install: tetris.exe
+	@if not exist $(BINDIR)\NUL $(MD) $(BINDIR)
+	$(CP) tetris.exe $(BINDIR)
+	$(CP) tetris.hlp $(BINDIR)
 
 clean:
-	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-
-install:
-	$(MD) ..\..\BIN
-	$(CP) $(BINARY) ..\..\BIN
-	$(CP) $(PROJECT).HLP ..\..\BIN
+	@if exist tetris.exe $(RM) tetris.exe
+	@if exist tetris.o   $(RM) tetris.o
+	@if exist tetris.fpd $(RM) tetris.fpd
+	@if exist tetris.sym $(RM) tetris.sym

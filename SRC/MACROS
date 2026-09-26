@@ -28,16 +28,19 @@ TPC=$(TP7ROOT)\BIN\tpc
 FPC=$(FPCROOT)\BIN\GO32V2\fpc
 
 #------------------------------------------------------------------------------
-# Where the compiled library units are installed ('make install' in SRC)
+# Where the compiled library units are installed ('make install' in SRC),
+# and where 'make install' copies the games and tools
 #------------------------------------------------------------------------------
 LIBROOT=\TMGDL\TEXTMODE
 LIBDIR=$(LIBROOT)\LIB
+BINDIR=$(LIBROOT)\BIN
 
 #------------------------------------------------------------------------------
 # Compiler selection: TMT Pascal unless 'make' is given -DUSE_BPC or
 # -DUSE_FPC (SRC\BUILD.BAT: 'BUILD BPC' or 'BUILD FPC').
 # CFLAGS: library build (always rebuilds every unit, so no stale units
-#         are left behind), LFLAGS: unit search path for games and tools.
+#         are left behind), LFLAGS: games and tools (unit search path).
+# Every folder's BUILD.BAT takes the same switch: BUILD [TMT|BPC|FPC].
 #------------------------------------------------------------------------------
 !if $d(USE_FPC)
 # ---- FREE PASCAL FLAGS --------------------

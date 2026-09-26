@@ -1,31 +1,36 @@
 #
-# Makefile for '2048' game
+# Makefile for the '2048' game (TMGDL 1.5)
+#
+#   make            build the game (the compiler is selected in MACROS)
+#   make install    copy the game to $(BINDIR)
+#   make clean      remove the compiled files
+#
+# Build and install the library first (SRC\BUILD). TMT Pascal is used
+# unless 'make' is given -DUSE_BPC or -DUSE_FPC, which BUILD.BAT does with
+# 'BUILD BPC' or 'BUILD FPC'.
 #
 !include "../../src/macros"
 
-PROJECT=2048
-SOURCE=$(PROJECT).pas
-BINARY=$(PROJECT).exe
-INCLUDE=game.inc \
-	globals.inc \
+INCLUDE=globals.inc \
 	engine.inc \
+	game.inc \
 	backgd.inc
 
-all:	$(BINARY)
-	
-$(BINARY): $(SOURCE) $(INCLUDE)
-	@$(PC) $(LFLAGS) $(SOURCE)
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
+all:	2048.exe
 
-clean:	
-	@if exist $(PROJECT).exe $(RM) $(PROJECT).exe
-	@if exist $(PROJECT).fpd $(RM) $(PROJECT).fpd
-	@if exist $(PROJECT).sym $(RM) $(PROJECT).sym
-	@if exist $(PROJECT).o   $(RM) $(PROJECT).o
+2048.exe: 2048.pas $(INCLUDE)
+	@$(PC) $(LFLAGS) 2048.pas
+	@if exist 2048.o   $(RM) 2048.o
+	@if exist 2048.fpd $(RM) 2048.fpd
+	@if exist 2048.sym $(RM) 2048.sym
 
-install:
-	@if not exist ..\..\BIN\NUL $(MD) ..\..\BIN
-	$(CP) $(BINARY) ..\..\BIN
-	$(CP) $(PROJECT).HLP ..\..\BIN
+install: 2048.exe
+	@if not exist $(BINDIR)\NUL $(MD) $(BINDIR)
+	$(CP) 2048.exe $(BINDIR)
+	$(CP) 2048.hlp $(BINDIR)
+
+clean:
+	@if exist 2048.exe $(RM) 2048.exe
+	@if exist 2048.o   $(RM) 2048.o
+	@if exist 2048.fpd $(RM) 2048.fpd
+	@if exist 2048.sym $(RM) 2048.sym
