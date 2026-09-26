@@ -416,7 +416,7 @@ Folder: [`GAMES/PIPES`](./GAMES/PIPES)
 
 ### Reversi
 
-Reversi (Othello) on a green 8 x 8 board: enclose the other player's discs to turn them over, and have the most discs when neither side can move. Two players, or one against the computer: easy, medium, or hard, which searches several moves ahead and plays the last eight perfectly. Legal moves can be shown, turned discs flip on screen, and moves can be taken back.
+Reversi (Othello) on a green 8 x 8 board, drawn in the 160 x 100 mode: enclose the other player's discs to turn them over, and have the most discs when neither side can move. Two players, or one against the computer: easy, medium, or hard, which searches several moves ahead and plays the last eight perfectly. Legal moves can be shown, turned discs flip over edge-on, and moves can be taken back.
 
 Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `M` show moves, `H` help, `?` about, `ESC` quit.
 
@@ -648,8 +648,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Invaders, Lander, Runner, Snake, Sokoban and Tetris
-  play in it.
+  Life (100 x 100 cells), Invaders, Lander, Reversi, Runner, Snake, Sokoban
+  and Tetris play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
