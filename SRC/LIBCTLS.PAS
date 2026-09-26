@@ -1052,6 +1052,7 @@ var	p, i	: integer;
 	found	: boolean;
 begin
 	i     := 1;
+	p     := 0;
 	found := FALSE;
 	while (i <= m^.size) and not found do
 	begin
@@ -1187,6 +1188,7 @@ begin
         dlg  := dialog_open(x, y, w, h, shade, title, '');
 	quit := FALSE;
 	id   := 0;
+	k    := 1;
 	if m^.last <> 0 then k := m^.last else move_home;
 	menu_table;
 	repeat
@@ -1319,6 +1321,7 @@ begin
 	if m^.last <> 0 then k := m^.last else k := 1;
 	repeat
 		sid := 0;
+		key := 0;
 		menu_item(k, TRUE);
 
 		if MENU_PULLED and m^.list[k].pop and (m^.list[k].sub <> nil) then
@@ -1380,6 +1383,7 @@ end;
 function	menuExec(m: PMENU; style: MENU_STYLE; shade: SHADING; x, y, txt, sel: integer; title: string): word;
 var	value	: word;
 begin
+	value := 0;
 	case style of
 	MSF_POP : value := menuPopup   (m, shade, x, y, txt, sel, title);
 	MSF_PULL: value := menuPulldown(m, shade, x, y, txt, sel, title);

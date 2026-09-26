@@ -821,8 +821,8 @@ begin
 {$ifndef FPC}
         pword(ltx_bit + ltx_offset(x, y))^ := data;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                MEMW[word(ltx_bit):ltx_offset(x, y)] := data
+        if ltx_bit = VIDEO_RAM then
+                MEMW[VSEG_ADDR:ltx_offset(x, y)] := data
         else    pword(ltx_bit+ltx_offset(x, y))^ := data;
 {$endif}
 end;
@@ -835,8 +835,8 @@ begin
 {$ifndef FPC}
         ltx_getw := pword(ltx_bit + ltx_offset(x, y))^;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                ltx_getw := MEMW[word(ltx_bit):ltx_offset(x, y)]
+        if ltx_bit = VIDEO_RAM then
+                ltx_getw := MEMW[VSEG_ADDR:ltx_offset(x, y)]
         else
                 ltx_getw := pword(ltx_bit+ltx_offset(x, y))^;
 {$endif}
@@ -849,8 +849,8 @@ begin
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y) + 1)^ := chr(a);
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                MEM[word(ltx_bit):ltx_offset(x, y) + 1] := a
+        if ltx_bit = VIDEO_RAM then
+                MEM[VSEG_ADDR:ltx_offset(x, y) + 1] := a
         else    (ltx_bit + ltx_offset(x, y) + 1)^ := char(a);
 {$endif}
 end;
@@ -862,8 +862,8 @@ begin
 {$ifndef FPC}
 	(ltx_bit + ltx_offset(x, y))^ := c;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                MEM[word(ltx_bit):ltx_offset(x, y)] := byte(c)
+        if ltx_bit = VIDEO_RAM then
+                MEM[VSEG_ADDR:ltx_offset(x, y)] := byte(c)
         else    (ltx_bit + ltx_offset(x, y))^ := c;
 {$endif}
 end;
@@ -876,8 +876,8 @@ begin
 {$ifndef FPC}
         ltx_geta := byte((ltx_bit + ltx_offset(x, y) + 1)^);
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                ltx_geta := MEM[word(ltx_bit):ltx_offset(x, y) + 1]
+        if ltx_bit = VIDEO_RAM then
+                ltx_geta := MEM[VSEG_ADDR:ltx_offset(x, y) + 1]
         else    ltx_geta := byte((ltx_bit + ltx_offset(x, y) + 1)^);
 {$endif}
 end;
@@ -890,8 +890,8 @@ begin
 {$ifndef FPC}
 	ltx_getc := (ltx_bit + ltx_offset(x, y))^;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
-                ltx_getc := char(MEM[word(ltx_bit):ltx_offset(x, y)])
+        if ltx_bit = VIDEO_RAM then
+                ltx_getc := char(MEM[VSEG_ADDR:ltx_offset(x, y)])
         else    ltx_getc := (ltx_bit + ltx_offset(x, y))^;
 {$endif}
 end;
@@ -912,7 +912,7 @@ begin
 		inc(p, SCR_LINEW);
 	end;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
+        if ltx_bit = VIDEO_RAM then
         begin
                 o := ltx_offset(x, y) + 1;
                 for j := 0 to h - 1 do
@@ -950,7 +950,7 @@ begin
 		inc(p, SCR_LINEW)
 	end;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
+        if ltx_bit = VIDEO_RAM then
         begin
                 v := byte(c);
                 o := ltx_offset(x, y);
@@ -994,7 +994,7 @@ begin
 		inc(p, r);
 	end;
 {$else}
-        if word(ltx_bit) = VSEG_ADDR then
+        if ltx_bit = VIDEO_RAM then
         begin
                 o := ltx_offset(x, y);
                 for j := 0 to h-1 do
@@ -1381,7 +1381,7 @@ begin
                                 #79:	pt := length(temp);
                                 #75:	if pt > 0 then dec(pt);
                                 #77:	if pt < length(temp) then inc(pt);
-                                #83:	if (pt >= 0) then delete(temp, pt+1, 1)
+                                #83:	delete(temp, pt+1, 1)
                                 end;
 			end;
                 #27:	begin
@@ -1470,9 +1470,10 @@ var	done	: boolean;
 	oldc	: word;
 	text	: string;
 begin
-	done := FALSE;
-	text := s;
-	oldc := cursor_shape;
+	done  := FALSE;
+	input := FALSE;
+	text  := s;
+	oldc  := cursor_shape;
 	cursor(CURSOR_ON);
 	gotoxy(x+length(text), y);
 	repeat

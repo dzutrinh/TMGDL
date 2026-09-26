@@ -67,6 +67,7 @@ end;
 function        boardFind(const v: VEC4_TYPE; x, stop: longint): longint;
 var	t: longint;
 begin
+	boardFind := x;
 	if x = 0 then
 	begin
 		boardFind := x;
@@ -270,6 +271,7 @@ var     x, y,
 		  end;
 begin
         len := 0;
+	fillchar(list, sizeof(list), 0);
 	for x := 0 to BOARD_DIM-1 do
 	for y := 0 to BOARD_DIM-1 do
 		if board[x, y] = 0 then

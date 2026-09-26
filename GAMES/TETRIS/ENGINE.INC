@@ -352,7 +352,9 @@ end;
 
 function	markerGet(const mk: MARKER_TYPE; idx: longint): byte;
 begin
-	if (idx > 0) and (idx <= BOARD_HEIGHT) then markerGet := mk.list[idx];
+	if (idx > 0) and (idx <= BOARD_HEIGHT) then
+		markerGet := mk.list[idx]
+	else	markerGet := 0;
 end;
 
 const	player	: SCORE_ENTRY = (name: ''; score: 0);

@@ -117,6 +117,7 @@ begin
 	gameUpdate;
 	fillchar(tmp, sizeof(BOARD_TYPE), 0);
 	c := 0;
+	ch := 0;
 	stop := FALSE;
 	center(24, '~09ENTER~01:START  ~08-  ~09ESC~01:QUIT');
 	repeat
@@ -149,6 +150,7 @@ var	c       : char;
 	anim	: ANIM_TYPE;
 begin
 	quit := FALSE; next := FALSE;
+	anim.count := 0;
 	gameLogo;
 	if stateLoad(board) then
 	begin

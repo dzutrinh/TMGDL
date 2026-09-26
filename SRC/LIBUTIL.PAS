@@ -813,6 +813,7 @@ begin
 		if ioresult <> 0 then ;
 		exit;
 	end;
+	nr := 0;
 	repeat
 		blockread(fi, buffer, sizeof(buffer), nr);
 		ok := ioresult = 0;

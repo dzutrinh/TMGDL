@@ -672,6 +672,7 @@ begin
 	package_append_file := FALSE;
 	if not package_reset(fi, name) then exit;
 	{$I-}
+	nr := 0;
 	repeat
 		blockread(fi, buffer, sizeof(buffer), nr);
 		ok := ioresult = 0;

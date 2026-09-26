@@ -76,7 +76,7 @@ begin
         end;
 end;
 
-procedure       block_inc(var f: TEXT; name: string; p: PBLOCK);
+procedure       block_inc(var f: TEXT; p: PBLOCK);
 var	i, j	: integer;
 	q	: pchar;
 begin
@@ -98,7 +98,6 @@ end;
 
 procedure	makePatterns(filename: string);
 var	f, g	: TEXT;
-        pname	: string;
         total,
         pw, ph	: integer;
         tmp	: string;
@@ -140,7 +139,7 @@ begin
                         end;
                         pat := block_create(pw, ph);
                         block_build(pat, @data);
-			block_inc(g, pname, pat);
+			block_inc(g, pat);
                         block_destroy(pat);
                 	writeln('done');
                         if j <> total then

@@ -102,6 +102,7 @@ var	c	: COLOR_TYPE;
 	a	: byte;
 begin
 	c := COLOR_TYPE(player);
+	a := $07;
         case c of
         CROSS	: a := GAME_CONFIG.clrX;
         NOUGHT	: a := GAME_CONFIG.clrO;
