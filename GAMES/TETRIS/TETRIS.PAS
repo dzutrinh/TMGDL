@@ -3,7 +3,7 @@
 {   TETRIS.PAS                                                               }
 {   ----------                                                               }
 {   Tetris Game for DOS                                                      }
-{   Version 1.1                                                              }
+{   Version 1.2                                                              }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2020-2026 by Infinity Group                               }
 {                                                                            }
@@ -32,7 +32,7 @@ uses	libtmgd, libtext, libctls, libutil, libsnd;
 {$i game.inc}			{ the game itself           }
 
 begin
-	gameInit(1, 1, '0925');	{ init the game             }
+	gameInit(1, 2, '0926');	{ init the game             }
 	gameMenu;		{ main loop                 }
 	gameDone;		{ clean-up and exit         }
 end.

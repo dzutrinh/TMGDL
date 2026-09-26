@@ -3,7 +3,7 @@
 {   T3.PAS                                                                   }
 {   ------                                                                   }
 {   Tic-Tac-Toe Game for DOS                                                 }
-{   Version 1.2                                                              }
+{   Version 1.3                                                              }
 {                                                                            }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2016-2021 by Infinity Group                               }
@@ -26,7 +26,7 @@ uses	libtmgd, libutil, libtext, libctls, libsnd;
 {$i game.inc}
 
 begin
-	gameInit(1, 2, '0925');
+	gameInit(1, 3, '0926');
 	gameMenu;
         gameShutdown;
 end.

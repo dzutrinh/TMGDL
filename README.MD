@@ -18,25 +18,25 @@ Supported compilers:
 
 | Game | Version | What it is |
 | --- | --- | --- |
-| [2048](#2048) | 1.4 | Slide and merge tiles to reach 2048 |
-| [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
+| [2048](#2048) | 1.5 | Slide and merge tiles to reach 2048 |
+| [Arkanoid](#arkanoid) | 1.1 | Brick breaker with power-up capsules |
 | [Centipede](#centipede) | 1.0 | Shoot the centipede winding through the mushrooms, in 160 x 100 |
-| [Chomp](#chomp) | 1.0 | Maze game in 160 x 100 colours, in the style of Paku Paku |
+| [Chomp](#chomp) | 1.1 | Maze game in 160 x 100 colours, in the style of Paku Paku |
 | [Dig Dug](#dig-dug) | 1.0 | Dig tunnels, pump the monsters, drop rocks on them, in 160 x 100 |
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
-| [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
-| [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
-| [Invaders](#invaders) | 1.0 | Space Invaders in 160 x 100, with shields and a saucer |
-| [Lander](#lander) | 1.0 | Lunar Lander in 160 x 100: land softly on a pad |
-| [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
-| [Pipes](#pipes) | 1.0 | Pipe Mania-style: lay a pipeline before the water comes |
-| [Reversi](#reversi) | 1.0 | Othello-style disc flipping against a friend or the computer |
-| [Runner](#runner) | 1.0 | Lode Runner-style platforms: dig, climb and grab the gold |
-| [Snake](#snake) | 1.0 | Eat apples, grow longer, dodge the obstacles |
-| [Sokoban](#sokoban) | 1.0 | Push the crates onto the goals, 12 levels |
-| [Solitaire](#solitaire) | 1.0 | Klondike patience, drawing one or three cards |
-| [Tetris](#tetris) | 1.1 | The falling-blocks classic |
-| [Tic-Tac-Toe](#tic-tac-toe) | 1.2 | Noughts and crosses against a friend or the computer |
+| [Game of Life](#game-of-life) | 1.2 | Conway's cellular automaton, with an editor |
+| [Gomoku](#gomoku) | 1.1 | Five in a row against a friend or the computer |
+| [Invaders](#invaders) | 1.1 | Space Invaders in 160 x 100, with shields and a saucer |
+| [Lander](#lander) | 1.1 | Lunar Lander in 160 x 100: land softly on a pad |
+| [Minesweeper](#minesweeper) | 1.1 | Clear the field without setting off a mine |
+| [Pipes](#pipes) | 1.1 | Pipe Mania-style: lay a pipeline before the water comes |
+| [Reversi](#reversi) | 1.1 | Othello-style disc flipping against a friend or the computer |
+| [Runner](#runner) | 1.1 | Lode Runner-style platforms: dig, climb and grab the gold |
+| [Snake](#snake) | 1.1 | Eat apples, grow longer, dodge the obstacles |
+| [Sokoban](#sokoban) | 1.1 | Push the crates onto the goals, 12 levels |
+| [Solitaire](#solitaire) | 1.1 | Klondike patience, drawing one or three cards |
+| [Tetris](#tetris) | 1.2 | The falling-blocks classic |
+| [Tic-Tac-Toe](#tic-tac-toe) | 1.3 | Noughts and crosses against a friend or the computer |
 
 Every game plays sound effects on the PC speaker; they can be turned off in
 its menu (in 2048, with `M`).

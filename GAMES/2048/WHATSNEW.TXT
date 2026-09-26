@@ -11,10 +11,12 @@
 # What's new:
 ===========
 
-## v1.4:
+## v1.5:
  - The game is played in the 160 x 100 mode: colored tiles with big
    numbers slide a pixel at a time, merged tiles pop, new ones grow.
  - The arrow keys slide the tiles too.
+
+## v1.4:
  - Tiles slide across the board with an animation.
  - Empty board cells are drawn as solid blocks.
  - Pressing '!' after a move no longer counts an extra move.
