@@ -22,6 +22,7 @@ Supported compilers:
 | [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
 | [Centipede](#centipede) | 1.0 | Shoot the centipede winding through the mushrooms, in 160 x 100 |
 | [Chomp](#chomp) | 1.0 | Maze game in 160 x 100 colours, in the style of Paku Paku |
+| [Dig Dug](#dig-dug) | 1.0 | Dig tunnels, pump the monsters, drop rocks on them, in 160 x 100 |
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
@@ -220,7 +221,7 @@ hiscoreView(scores, 'HALL OF FAME', SHADE_BLUE, rank);
 hiscoreSave('GAME.HI', scores);
 ```
 
-Every game with a leader board uses it: 2048, Arkanoid, Centipede, Chomp, Dungeon,
+Every game with a leader board uses it: 2048, Arkanoid, Centipede, Chomp, Dig Dug, Dungeon,
 Invaders, Lander, Minesweeper (the best times of each level), Pipes, Runner,
 Snake, Solitaire and Tetris.
 
@@ -314,6 +315,18 @@ Folder: [`GAMES/CHOMP`](./GAMES/CHOMP)
 ![](./GAMES/CHOMP/SCREEN01.GIF)
 
 ![](./GAMES/CHOMP/SCREEN02.GIF)
+
+### Dig Dug
+
+Dig your own tunnels through four layers of earth to get at the monsters hiding in it. Pookas and fire-breathing Fygars walk the tunnels towards you, and now and then float straight through the earth as a pair of eyes. Harpoon one and keep pumping: four pumps and it pops, worth more the deeper it is (and twice as much for a Fygar pumped from the side). Dig under a rock and it falls, crushing whatever is below for a big bonus; after two rocks a vegetable shows up. The last monster of a round runs away. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), with a leader board.
+
+Keys: arrows or `W` `A` `S` `D` walk and dig, `SPACE` harpoon and pump (hold it down to keep pumping), `P` pause, `H` help, `ESC` quit.
+
+Folder: [`GAMES/DIGDUG`](./GAMES/DIGDUG)
+
+![](./GAMES/DIGDUG/SCREEN01.GIF)
+
+![](./GAMES/DIGDUG/SCREEN02.GIF)
 
 ### Dungeon
 
@@ -621,8 +634,9 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   names, paths, drives, choices, switches, passwords) checked as they are left.
 - `package_read` reads a file of a package into memory; the log view shows
   `~XY` color codes.
-- Fourteen new games: Arkanoid, Centipede, Chomp, Dungeon, Gomoku, Invaders,
-  Lander, Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and Solitaire.
+- Fifteen new games: Arkanoid, Centipede, Chomp, Dig Dug, Dungeon, Gomoku,
+  Invaders, Lander, Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and
+  Solitaire.
 - Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
   lines, rectangles and circles.
 - `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
@@ -633,9 +647,9 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   versions, and the settings of some games, are reset once.
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
-  Arkanoid, Centipede, Chomp (in the style of Paku Paku), Game of Life
-  (100 x 100 cells), Invaders, Lander, Runner, Snake, Sokoban and Tetris play
-  in it.
+  Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
+  Life (100 x 100 cells), Invaders, Lander, Runner, Snake, Sokoban and Tetris
+  play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
