@@ -20,6 +20,7 @@ Supported compilers:
 | --- | --- | --- |
 | [2048](#2048) | 1.4 | Slide and merge tiles to reach 2048 |
 | [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
+| [Centipede](#centipede) | 1.0 | Shoot the centipede winding through the mushrooms, in 160 x 100 |
 | [Chomp](#chomp) | 1.0 | Maze game in 160 x 100 colours, in the style of Paku Paku |
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
@@ -212,7 +213,7 @@ hiscoreView(scores, 'HALL OF FAME', SHADE_BLUE, rank);
 hiscoreSave('GAME.HI', scores);
 ```
 
-Every game with a leader board uses it: 2048, Arkanoid, Chomp, Dungeon,
+Every game with a leader board uses it: 2048, Arkanoid, Centipede, Chomp, Dungeon,
 Invaders, Lander, Minesweeper (the best times of each level), Pipes, Runner,
 Snake, Solitaire and Tetris.
 
@@ -282,6 +283,18 @@ Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 ![](./GAMES/ARKANOID/SCREEN01.GIF)
 
 ![](./GAMES/ARKANOID/SCREEN02.GIF)
+
+### Centipede
+
+A centipede winds down through a field of mushrooms, running sideways until it meets a mushroom or the side, then dropping a row and turning. Every segment shot becomes a mushroom and breaks the centipede in two, each part with its own head; down in the player's rows new heads come in at the sides. A spider bounces through the bottom rows eating mushrooms, fleas drop down planting new ones, and scorpions poison the mushrooms they touch, sending the centipede diving. Waves get faster and change colours; mushrooms grow back after a life is lost. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), with a leader board.
+
+Keys: arrows or `W` `A` `S` `D` move, `SPACE` fires (hold it down), `P` pause, `ESC` quit.
+
+Folder: [`GAMES/CENTIPED`](./GAMES/CENTIPED)
+
+![](./GAMES/CENTIPED/SCREEN01.GIF)
+
+![](./GAMES/CENTIPED/SCREEN02.GIF)
 
 ### Chomp
 
@@ -601,8 +614,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   names, paths, drives, choices, switches, passwords) checked as they are left.
 - `package_read` reads a file of a package into memory; the log view shows
   `~XY` color codes.
-- Thirteen new games: Arkanoid, Chomp, Dungeon, Gomoku, Invaders, Lander,
-  Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and Solitaire.
+- Fourteen new games: Arkanoid, Centipede, Chomp, Dungeon, Gomoku, Invaders,
+  Lander, Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and Solitaire.
 - Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
   lines, rectangles and circles.
 - `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
@@ -616,7 +629,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   height (Arkanoid), pictured tiles with sliding crates (Sokoban), or a field
   half as tall again with drawn ladders and runners (Runner).
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
-  3 x 5 font; Chomp plays in it, in the style of Paku Paku.
+  3 x 5 font; Chomp plays in it, in the style of Paku Paku, and so does
+  Centipede.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
