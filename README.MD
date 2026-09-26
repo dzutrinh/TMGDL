@@ -44,10 +44,56 @@ Supported compilers:
 | Unit | Contents |
 | --- | --- |
 | `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, boxes, dialogs, keyboard, millisecond timer |
-| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box |
+| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, [forms](#forms) |
 | `LIBUTIL` | Files, folders, drives, configuration and text files, CRC32, message boxes |
 | `LIBPACK` | Package (resource archive) files: create, extract, add, delete, verify, self-extractors |
 | `LIBTMGD` | Uses all of the above, plus version and compiler information |
+
+### Forms
+
+`LIBCTLS` has a form control: a dialog of labelled fields, edited in place.
+Each field has a kind that decides what can be typed in it and how it is
+checked when the user leaves it:
+
+| Kind | Field |
+| --- | --- |
+| `FK_TEXT` | Any text |
+| `FK_UPPER` | Text in capitals |
+| `FK_NUMBER` | Whole number, within `formSetRange` |
+| `FK_FILENAME` | DOS file name (8.3) |
+| `FK_PATH` | Drive, folders and file name |
+| `FK_DRIVE` | One drive letter |
+| `FK_CHOICE` | One of a list set with `formSetChoices`, picked with the arrows, Space or its first letter |
+| `FK_SWITCH` | YES or NO |
+| `FK_PASSWORD` | Text shown as stars |
+
+Fields can be required, and can have their own check: a far function that
+may tidy the value up and returns `''` when it is right, or the message to
+show. Up/Shift-Tab goes back, Down/Tab/Enter goes forward, F10 finishes and
+Esc cancels (the values are then left as they were).
+
+```pascal
+function checkEven(var value: string): string;
+begin
+  checkEven := '';
+  if odd(atol(value)) then checkEven := 'THE COUNT MUST BE EVEN';
+end;
+
+f := formCreate(-1, -1, 0, SHADE_BLUE, ' SETTINGS ');
+formAdd(f, 'Player', FK_TEXT, 20, 'Player 1');
+formAdd(f, 'Count', FK_NUMBER, 4, '10');
+formAdd(f, 'Level', FK_CHOICE, 0, 'NORMAL');
+formAdd(f, 'Sound', FK_SWITCH, 3, 'YES');
+formSetRequired(f, 1, TRUE);
+formSetRange(f, 2, 0, 100);
+formSetCheck(f, 2, checkEven);
+formSetChoices(f, 3, 'EASY|NORMAL|HARD');
+if formExec(f) then
+  writeln(formText(f, 1), formNumber(f, 2), formChoice(f, 3), formSwitch(f, 4));
+formDestroy(f);
+```
+
+PM's *Create installer package* dialog is built with it.
 
 ## Building
 

@@ -3,7 +3,7 @@
 {   LIBCTLS.PAS                                                              }
 {   -----------                                                              }
 {   Library for text-based common controls                                   }
-{   Version 1.5                                                              }
+{   Version 1.6                                                              }
 {                                                                            }
 {   Coded by Trinh D.D. Nguyen                                               }
 {   Copyrights (c) 2016-2021 by Infinity Group                               }
@@ -21,7 +21,7 @@
 {   . Menu pop-up       | . Menu pull-down     | . Help box                  }
 {   . Progress bar      | . Input box          | . Drive picker              }
 {   . List view/picker  | . Scroll bar         | . Log view                  }
-{   . ASCII char map    |                                                    }
+{   . ASCII char map    | . Form (fields)                                    }
 {                                                                            }
 { ////////////////////////////////////////////////////////////////////////// }
 
@@ -33,7 +33,7 @@ interface
 
 uses	libtext;
 
-const	LIBCTLS_VERSION	= $0105;
+const	LIBCTLS_VERSION	= $0106;
 	LIBCTLS_BUILD	= '0925';
 
 { //////////////////////////////// LABEL API /////////////////////////////// }
@@ -366,6 +366,67 @@ function	logviewCreate(x, y, w, h, attr: integer): PLOGVIEW;
 procedure	logviewDestroy(var log: PLOGVIEW);
 procedure	logviewDraw(const log: PLOGVIEW);
 procedure	logviewAdd(var log: PLOGVIEW; text: STR80);
+
+{ ///////////////////////////////// FORM API /////////////////////////////// }
+
+const	FORM_MAX_FIELDS	= 16;
+
+type	FIELD_KIND	= (FK_TEXT,		{ any text                       }
+			   FK_UPPER,		{ text in capitals               }
+			   FK_NUMBER,		{ whole number, see formSetRange }
+			   FK_FILENAME,		{ DOS file name (8.3)            }
+			   FK_PATH,		{ drive, folders and file name   }
+			   FK_DRIVE,		{ one drive letter               }
+			   FK_CHOICE,		{ one of a list: formSetChoices  }
+			   FK_SWITCH,		{ YES or NO                      }
+			   FK_PASSWORD);	{ text shown as stars            }
+
+	{ own check of a field: may tidy up the value; returns '' when the }
+	{ value is right, or the message to show                           }
+	FIELD_CHECK_FUNC = function(var value: string): string;
+
+	FIELD_TYPE	= record
+		caption	: STR30;
+		kind	: FIELD_KIND;
+		value	: string;
+		width	: integer;		{ columns = longest value        }
+		min, max: longint;		{ FK_NUMBER range                }
+		choices	: string;		{ FK_CHOICE items, '|' between   }
+		required: boolean;
+		hasCheck: boolean;
+		check	: FIELD_CHECK_FUNC;
+	end;
+
+	PFORM		= ^FORM_TYPE;
+	FORM_TYPE	= record
+		x, y,
+		w, h	: integer;
+		title	: STR80;
+		note	: STR80;		{ line under the fields          }
+		shade	: SHADING;
+		nrm, sel: byte;			{ field colors, idle and edited  }
+		count,
+		current,
+		labelw	: integer;
+		fields	: array[1..FORM_MAX_FIELDS] of FIELD_TYPE;
+	end;
+
+function	formCreate(x, y, w: integer; shade: SHADING; title: string): PFORM;
+procedure	formDestroy(var f: PFORM);
+function	formAdd(f: PFORM; caption: string; kind: FIELD_KIND; width: integer; value: string): integer;
+procedure	formSetRange(f: PFORM; field: integer; min, max: longint);
+procedure	formSetChoices(f: PFORM; field: integer; choices: string);
+procedure	formSetRequired(f: PFORM; field: integer; required: boolean);
+procedure	formSetCheck(f: PFORM; field: integer; check: FIELD_CHECK_FUNC);
+procedure	formSetNote(f: PFORM; note: string);
+procedure	formSetColors(f: PFORM; nrm, sel: byte);
+procedure	formSetText(f: PFORM; field: integer; value: string);
+function	formExec(f: PFORM): boolean;
+function	formText(f: PFORM; field: integer): string;
+function	formNumber(f: PFORM; field: integer): longint;
+function	formSwitch(f: PFORM; field: integer): boolean;
+function	formChoice(f: PFORM; field: integer): integer;
+
 
 implementation
 
@@ -2191,6 +2252,551 @@ begin
                 log^.log[log^.h-1] := text;
         end;
 	logviewDraw(log);
+end;
+
+{ ///////////////////////////////// FORM API /////////////////////////////// }
+
+const	FORM_KEYS	= '~0FENTER~07/~0F'#25'~07: NEXT  ~0F'#24'~07: BACK  ~0FF10~07: DONE  ~0FESC~07: CANCEL';
+	FORM_YES	= 'YES';
+	FORM_NO		= 'NO';
+	FORM_PICK	= '~0F'#27#26'~07 OR ~0FSPACE~07: CHANGE';
+
+function	formCreate(x, y, w: integer; shade: SHADING; title: string): PFORM;
+var	f	: PFORM;
+begin
+	formCreate := nil;
+	if ltx_maxavail < sizeof(FORM_TYPE) then exit;
+	new(f);
+	f^.x	   := x;
+	f^.y	   := y;
+	f^.w	   := w;
+	f^.h	   := 0;
+	f^.title   := title;
+	f^.note	   := '';
+	f^.shade   := shade;
+	f^.nrm	   := $0F;
+	f^.sel	   := $3F;
+	f^.count   := 0;
+	f^.current := 1;
+	f^.labelw  := 0;
+	formCreate := f;
+end;
+
+procedure	formDestroy(var f: PFORM);
+begin
+	if f = nil then exit;
+	dispose(f);
+	f := nil;
+end;
+
+function	formValid(f: PFORM; field: integer): boolean;
+begin
+	formValid := (f <> nil) and (field >= 1) and (field <= f^.count);
+end;
+
+{ item i (1..) of a '|' separated list, '' past the end }
+function	formItem(list: string; i: integer): string;
+var	p	: integer;
+begin
+	while i > 1 do
+	begin
+		p := pos('|', list);
+		if p = 0 then
+		begin
+			formItem := '';
+			exit;
+		end;
+		delete(list, 1, p);
+		dec(i);
+	end;
+	p := pos('|', list);
+	if p > 0 then list[0] := chr(p - 1);
+	formItem := list;
+end;
+
+function	formItems(list: string): integer;
+var	i, n	: integer;
+begin
+	n := 1;
+	for i := 1 to length(list) do if list[i] = '|' then inc(n);
+	if list = '' then n := 0;
+	formItems := n;
+end;
+
+{ position of value in the choices of field k, 0 if none }
+function	formIndex(const fd: FIELD_TYPE): integer;
+var	i	: integer;
+begin
+	formIndex := 0;
+	for i := 1 to formItems(fd.choices) do
+		if toupper(formItem(fd.choices, i)) = toupper(fd.value) then
+		begin
+			formIndex := i;
+			exit;
+		end;
+end;
+
+{ put the value of a field in shape for its kind }
+procedure	formNormalize(var fd: FIELD_TYPE);
+var	s	: string;
+begin
+	with fd do
+	case kind of
+	FK_SWITCH:
+		begin
+			s := toupper(value);
+			if (s = 'Y') or (s = FORM_YES) or (s = '1') or (s = 'ON') or (s = 'TRUE') then
+				value := FORM_YES
+			else	value := FORM_NO;
+		end;
+	FK_CHOICE:
+		if choices = '' then exit
+		else if formIndex(fd) = 0 then value := formItem(choices, 1)
+		else	value := formItem(choices, formIndex(fd));
+	FK_UPPER,
+	FK_FILENAME,
+	FK_PATH,
+	FK_DRIVE:
+		value := toupper(value);
+	end;
+	if length(fd.value) > fd.width then fd.value[0] := chr(fd.width);
+end;
+
+function	formAdd(f: PFORM; caption: string; kind: FIELD_KIND; width: integer; value: string): integer;
+var	k	: integer;
+begin
+	formAdd := 0;
+	if (f = nil) or (f^.count >= FORM_MAX_FIELDS) then exit;
+	inc(f^.count);
+	k := f^.count;
+	if length(caption) > 30 then caption[0] := #30;
+	if kind = FK_DRIVE then width := 1;
+	if (kind = FK_SWITCH) and (width < 3) then width := 3;
+	if (kind = FK_NUMBER) and (width > 11) then width := 11;
+	if width < 1 then width := 1;
+	if width > 255 then width := 255;
+	f^.fields[k].caption  := caption;
+	f^.fields[k].kind     := kind;
+	f^.fields[k].value    := value;
+	f^.fields[k].width    := width;
+	f^.fields[k].min      := -maxlongint;
+	f^.fields[k].max      := maxlongint;
+	f^.fields[k].choices  := '';
+	f^.fields[k].required := FALSE;
+	f^.fields[k].hasCheck := FALSE;
+	formNormalize(f^.fields[k]);
+	if length(caption) > f^.labelw then f^.labelw := length(caption);
+	formAdd := k;
+end;
+
+procedure	formSetRange(f: PFORM; field: integer; min, max: longint);
+begin
+	if not formValid(f, field) then exit;
+	f^.fields[field].min := min;
+	f^.fields[field].max := max;
+end;
+
+procedure	formSetChoices(f: PFORM; field: integer; choices: string);
+var	i	: integer;
+begin
+	if not formValid(f, field) then exit;
+	for i := 1 to formItems(choices) do
+		if length(formItem(choices, i)) > f^.fields[field].width then
+			f^.fields[field].width := length(formItem(choices, i));
+	f^.fields[field].choices := choices;
+	formNormalize(f^.fields[field]);
+end;
+
+procedure	formSetRequired(f: PFORM; field: integer; required: boolean);
+begin
+	if formValid(f, field) then f^.fields[field].required := required;
+end;
+
+procedure	formSetCheck(f: PFORM; field: integer; check: FIELD_CHECK_FUNC);
+begin
+	if not formValid(f, field) then exit;
+	f^.fields[field].check    := check;
+	f^.fields[field].hasCheck := TRUE;
+end;
+
+procedure	formSetNote(f: PFORM; note: string);
+begin
+	if f <> nil then f^.note := note;
+end;
+
+procedure	formSetColors(f: PFORM; nrm, sel: byte);
+begin
+	if f = nil then exit;
+	f^.nrm := nrm;
+	f^.sel := sel;
+end;
+
+procedure	formSetText(f: PFORM; field: integer; value: string);
+begin
+	if not formValid(f, field) then exit;
+	f^.fields[field].value := value;
+	formNormalize(f^.fields[field]);
+end;
+
+function	formText(f: PFORM; field: integer): string;
+begin
+	formText := '';
+	if formValid(f, field) then formText := f^.fields[field].value;
+end;
+
+function	formNumber(f: PFORM; field: integer): longint;
+begin
+	formNumber := 0;
+	if formValid(f, field) then formNumber := atol(f^.fields[field].value);
+end;
+
+function	formSwitch(f: PFORM; field: integer): boolean;
+begin
+	formSwitch := FALSE;
+	if formValid(f, field) then formSwitch := f^.fields[field].value = FORM_YES;
+end;
+
+function	formChoice(f: PFORM; field: integer): integer;
+begin
+	formChoice := 0;
+	if formValid(f, field) then formChoice := formIndex(f^.fields[field]);
+end;
+
+{ TRUE when s is a DOS file name: 1 to 8 characters, then an optional }
+{ dot with up to 3 more                                               }
+function	formIs83(s: string): boolean;
+var	p	: integer;
+begin
+	p := pos('.', s);
+	if p = 0 then formIs83 := (s <> '') and (length(s) <= 8)
+	else	formIs83 := (p > 1) and (p <= 9) and (length(s) - p <= 3) and
+			    (pos('.', copy(s, p + 1, 255)) = 0);
+end;
+
+{ TRUE when s is a path: an optional drive, then 8.3 names between '\' }
+function	formIsPath(s: string): boolean;
+var	p	: integer;
+begin
+	formIsPath := FALSE;
+	if (length(s) >= 2) and (s[2] = ':') then
+	begin
+		if not (s[1] in ['A'..'Z']) then exit;
+		delete(s, 1, 2);
+	end;
+	if (s <> '') and (s[1] = '\') then delete(s, 1, 1);
+	if (s <> '') and (s[length(s)] = '\') then dec(s[0]);
+	if pos(':', s) > 0 then exit;
+	while s <> '' do
+	begin
+		p := pos('\', s);
+		if p = 0 then p := length(s) + 1;
+		if not formIs83(copy(s, 1, p - 1)) then exit;
+		delete(s, 1, p);
+	end;
+	formIsPath := TRUE;
+end;
+
+{ check field k and tidy up its value; returns '' or the error message }
+function	formCheck(var fd: FIELD_TYPE): string;
+var	s	: string;
+	i	: integer;
+	neg	: boolean;
+begin
+	formCheck := '';
+	s := fd.value;
+	if fd.kind <> FK_PASSWORD then
+	begin
+		while (s <> '') and (s[1] = ' ') do delete(s, 1, 1);
+		while (s <> '') and (s[length(s)] = ' ') do dec(s[0]);
+	end;
+	fd.value := s;
+	formNormalize(fd);
+	s := fd.value;
+	if s = '' then
+	begin
+		if fd.required then formCheck := 'PLEASE FILL IN ' + toupper(fd.caption);
+		if fd.required or not fd.hasCheck then exit;
+	end
+	else
+	case fd.kind of
+	FK_NUMBER:
+		begin
+			neg := s[1] = '-';
+			if neg then delete(s, 1, 1);
+			while (length(s) > 1) and (s[1] = '0') do delete(s, 1, 1);
+			for i := 1 to length(s) do
+				if not (s[i] in ['0'..'9']) then s := '';
+			if (s = '') or (length(s) > 10) or
+			   ((length(s) = 10) and (s > '2147483647')) then
+			begin
+				formCheck := 'ENTER A WHOLE NUMBER';
+				exit;
+			end;
+			if neg and (s <> '0') then s := '-' + s;
+			fd.value := s;
+			if (atol(s) < fd.min) or (atol(s) > fd.max) then
+			begin
+				formCheck := 'ENTER A NUMBER FROM ' + ltoa(fd.min) + ' TO ' + ltoa(fd.max);
+				exit;
+			end;
+		end;
+	FK_FILENAME:
+		if not formIs83(s) then
+		begin
+			formCheck := 'NOT A VALID DOS FILE NAME';
+			exit;
+		end;
+	FK_PATH:
+		if not formIsPath(s) then
+		begin
+			formCheck := 'NOT A VALID DOS PATH';
+			exit;
+		end;
+	FK_DRIVE:
+		if not (s[1] in ['A'..'Z']) then
+		begin
+			formCheck := 'THE DRIVE IS A LETTER, LIKE C';
+			exit;
+		end;
+	end;
+	if fd.hasCheck then formCheck := fd.check(fd.value);
+end;
+
+{ may character c go into a field of the given kind? }
+function	formAccepts(const fd: FIELD_TYPE; const s: string; p: integer; c: char): boolean;
+begin
+	case fd.kind of
+	FK_NUMBER:
+		formAccepts := (c in ['0'..'9']) or
+			       ((c = '-') and (p = 0) and (fd.min < 0) and (pos('-', s) = 0));
+	FK_FILENAME:
+		formAccepts := (c in ['A'..'Z', '0'..'9', '!', '#'..')', '-', '@', '^'..'`', '{', '}', '~']) or
+			       ((c = '.') and (pos('.', s) = 0));
+	FK_PATH:
+		formAccepts := c in ['A'..'Z', '0'..'9', '!', '#'..')', '-', '.', ':', '@', '\', '^'..'`', '{', '}', '~'];
+	FK_DRIVE:
+		formAccepts := c in ['A'..'Z'];
+	else
+		formAccepts := (c >= ' ') and (c <> #127);
+	end;
+end;
+
+function	formExec(f: PFORM): boolean;
+var	dlg	: PDIALOG;
+	save	: array[1..FORM_MAX_FIELDS] of string;
+	fx, i,
+	k, dw	: integer;
+	msg	: string;
+	done,
+	ok	: boolean;
+
+	{ what field i shows, from position ofs on }
+	function	shown(i: integer; const s: string; ofs: integer): string;
+	begin
+		if f^.fields[i].kind = FK_PASSWORD then
+			shown := rpad(repl('*', length(s) - ofs), dw)
+		else	shown := rpad(copy(s, ofs + 1, dw), dw);
+	end;
+
+	procedure	show_fields;
+	var	i	: integer;
+		line	: string;
+	begin
+		for i := 1 to f^.count do
+		begin
+			if i = k then print(f^.x + 3, f^.y + 1 + i, '~0F' + f^.fields[i].caption)
+			else	print(f^.x + 3, f^.y + 1 + i, '~07' + f^.fields[i].caption);
+			prints(fx, f^.y + 1 + i, f^.nrm, copy(shown(i, f^.fields[i].value, 0), 1,
+								  ltx_min(f^.fields[i].width, dw)));
+		end;
+		{ the line under the fields: an error, a hint or the note }
+		if msg <> '' then line := '~0C' + msg
+		else if f^.fields[k].kind in [FK_CHOICE, FK_SWITCH] then line := FORM_PICK
+		else	line := f^.note;
+		print(f^.x + 3, f^.y + f^.count + 3, line + repl(' ', f^.w - 6 - text_length(line)));
+	end;
+
+	{ edit field k; returns the key that ends the edit }
+	function	edit: word;
+	var	s	: string;
+		c	: char;
+		key	: word;
+		fw, n,
+		p, ofs	: integer;
+		fy, i	: integer;
+		pick	: boolean;
+		t	: string;
+	begin
+		s    := f^.fields[k].value;
+		fw   := f^.fields[k].width;
+		fy   := f^.y + 1 + k;
+		pick := f^.fields[k].kind in [FK_CHOICE, FK_SWITCH];
+		if pick then cursor(CURSOR_OFF) else cursor(CURSOR_ON);
+		p    := length(s);
+		ofs  := 0;
+		repeat
+			if p < ofs then ofs := p;
+			if p - ofs >= dw then ofs := p - dw + 1;
+			if fw < dw then n := fw else n := dw;
+			prints(fx, fy, f^.sel, copy(shown(k, s, ofs), 1, n));
+			gotoxy(fx + p - ofs, fy);
+			c := readkey;
+			if c = #0 then key := ord(readkey) shl 8 else key := ord(c);
+			if pick then
+			begin
+				if f^.fields[k].kind = FK_SWITCH then
+				begin
+					if (key = KEY_LEFT) or (key = KEY_RIGHT) or (key = KEY_SPACE) then
+						if s = FORM_YES then s := FORM_NO else s := FORM_YES;
+					if upcase(chr(key and $FF)) = 'Y' then s := FORM_YES;
+					if upcase(chr(key and $FF)) = 'N' then s := FORM_NO;
+				end
+				else
+				begin
+					f^.fields[k].value := s;
+					n := formIndex(f^.fields[k]);
+					case key of
+					KEY_LEFT:	if n > 1 then dec(n) else n := formItems(f^.fields[k].choices);
+					KEY_RIGHT,
+					KEY_SPACE:	if n < formItems(f^.fields[k].choices) then inc(n) else n := 1;
+					KEY_HOME:	n := 1;
+					KEY_END:	n := formItems(f^.fields[k].choices);
+					else
+						{ a letter picks the next item starting with it }
+						if (key > 32) and (key < 256) then
+							for p := 1 to formItems(f^.fields[k].choices) do
+							begin
+								i := (n + p - 1) mod formItems(f^.fields[k].choices) + 1;
+								t := formItem(f^.fields[k].choices, i);
+								if (t <> '') and (upcase(t[1]) = upcase(chr(key))) then
+								begin
+									n := i;
+									break;
+								end;
+							end;
+					end;
+					s := formItem(f^.fields[k].choices, n);
+				end;
+				p := 0;
+			end
+			else
+			case key of
+			KEY_LEFT:	if p > 0 then dec(p);
+			KEY_RIGHT:	if p < length(s) then inc(p);
+			KEY_HOME:	p := 0;
+			KEY_END:	p := length(s);
+			KEY_DELETE:	delete(s, p + 1, 1);
+			KEY_BACKSPACE:	if p > 0 then
+					begin
+						delete(s, p, 1);
+						dec(p);
+					end;
+			else
+				if (key >= 32) and (key < 256) then
+				begin
+					c := chr(key);
+					if f^.fields[k].kind in [FK_UPPER, FK_FILENAME, FK_PATH, FK_DRIVE] then
+						c := upcase(c);
+					if (f^.fields[k].kind = FK_DRIVE) and formAccepts(f^.fields[k], s, 0, c) then
+					begin
+						s := c;
+						p := 1;
+					end
+					else if (length(s) < fw) and formAccepts(f^.fields[k], s, p, c) then
+					begin
+						insert(c, s, p + 1);
+						inc(p);
+					end;
+				end;
+			end;
+			if msg <> '' then
+			begin
+				msg := '';
+				show_fields;
+			end;
+		until (key = KEY_ENTER) or (key = KEY_TAB) or (key = KEY_SHIFT_TAB) or
+		      (key = KEY_UP) or (key = KEY_DOWN) or (key = KEY_F10) or (key = KEY_ESC);
+		cursor(CURSOR_OFF);
+		f^.fields[k].value := s;
+		edit := key;
+	end;
+
+	{ check every field; the first bad one becomes the current one }
+	function	all_right: boolean;
+	var	i	: integer;
+	begin
+		all_right := FALSE;
+		for i := 1 to f^.count do
+		begin
+			msg := formCheck(f^.fields[i]);
+			if msg <> '' then
+			begin
+				k := i;
+				exit;
+			end;
+		end;
+		all_right := TRUE;
+	end;
+
+begin
+	formExec := FALSE;
+	if (f = nil) or (f^.count = 0) then exit;
+
+	{ size the box to fit the labels, the fields and the key line }
+	dw := 1;
+	for i := 1 to f^.count do
+		if f^.fields[i].width > dw then dw := f^.fields[i].width;
+	if dw > SCR_WIDTH - f^.labelw - 11 then dw := SCR_WIDTH - f^.labelw - 11;
+	i := f^.labelw + dw + 9;
+	if f^.w < i then f^.w := i;
+	i := text_length(FORM_KEYS) + 6;
+	if f^.w < i then f^.w := i;
+	i := text_length(f^.note) + 6;
+	if f^.w < i then f^.w := i;
+	if f^.w > SCR_WIDTH then f^.w := SCR_WIDTH;
+	f^.h := f^.count + 6;
+	ltx_validate_rect(f^.x, f^.y, f^.w, f^.h);
+	fx := f^.x + f^.labelw + 6;
+
+	fillchar(save, sizeof(save), 0);
+	for i := 1 to f^.count do save[i] := f^.fields[i].value;
+	dlg := dialog_open(f^.x, f^.y, f^.w, f^.h, f^.shade, f^.title, '');
+	for i := 1 to f^.count do print(fx - 2, f^.y + 1 + i, '~08:');
+	print(f^.x + 3, f^.y + f^.count + 4, FORM_KEYS);
+
+	if (f^.current < 1) or (f^.current > f^.count) then f^.current := 1;
+	k    := f^.current;
+	msg  := '';
+	ok   := TRUE;
+	done := FALSE;
+	show_fields;
+	while ok and not done do
+	begin
+		case edit of
+		KEY_ESC:	ok := FALSE;
+		KEY_UP,
+		KEY_SHIFT_TAB:	if k > 1 then dec(k) else k := f^.count;
+		KEY_DOWN,
+		KEY_TAB:	begin
+					msg := formCheck(f^.fields[k]);
+					if msg = '' then
+						if k < f^.count then inc(k) else k := 1;
+				end;
+		KEY_ENTER:	begin
+					msg := formCheck(f^.fields[k]);
+					if msg = '' then
+						if k < f^.count then inc(k) else done := all_right;
+				end;
+		KEY_F10:	done := all_right;
+		end;
+		show_fields;
+	end;
+	dialog_close(dlg);
+
+	f^.current := k;
+	if not ok then
+		for i := 1 to f^.count do f^.fields[i].value := save[i];
+	formExec := ok;
 end;
 
 end.
