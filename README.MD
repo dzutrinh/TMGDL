@@ -20,6 +20,7 @@ Supported compilers:
 | [2048](#2048) | 1.4 | Slide and merge tiles to reach 2048 |
 | [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
 | [Chomp](#chomp) | 1.0 | Maze game: eat the dots, avoid four ghosts |
+| [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
 | [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
@@ -48,9 +49,9 @@ Supported compilers:
 | Unit | Contents |
 | --- | --- |
 | `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, boxes, dialogs, keyboard, millisecond timer |
-| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, [forms](#forms) |
+| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, colored log view, [forms](#forms) |
 | `LIBUTIL` | Files, folders, drives, configuration and text files, CRC32, message boxes |
-| `LIBPACK` | Package (resource archive) files: create, extract, add, delete, verify, self-extractors |
+| `LIBPACK` | Package (resource archive) files: create, extract, read into memory, add, delete, verify, self-extractors |
 | `LIBTMGD` | Uses all of the above, plus version and compiler information |
 
 ### Forms
@@ -178,6 +179,20 @@ Folder: [`GAMES/CHOMP`](./GAMES/CHOMP)
 ![](./GAMES/CHOMP/SCREEN01.GIF)
 
 ![](./GAMES/CHOMP/SCREEN02.GIF)
+
+### Dungeon
+
+A roguelike in the tradition of Rogue: go down ten depths of rooms and corridors, made anew for every game, and take the Amulet of Yendoria from the red dragon that keeps it. Create a warrior, rogue or mage in a form (with hard mode and a dungeon seed: the same seed makes the same dungeon), fight 15 kinds of monsters turn by turn, and find potions, scrolls, weapons and armor. Rooms are lit, corridors dark, and what was seen is remembered. Save and continue later, but death is for good: a tombstone and the hall of fame are all that remain.
+
+It uses much of the library: the monster and item tables are text files in the `DUNGEON.PCK` package, read with `package_read`; HP and XP are gauges; the pack is a list view; messages go to a colored log view, with the history in a list view; the hero is made in a form.
+
+Keys: arrows, `Home` `End` `PgUp` `PgDn` or the keypad digits move and attack, `SPACE` wait, `G` pick up, `I` pack, `>` go down, `R` rest, `M` messages, `C` hero, `H` help, `S`/`ESC` save and leave.
+
+Folder: [`GAMES/DUNGEON`](./GAMES/DUNGEON)
+
+![](./GAMES/DUNGEON/SCREEN01.GIF)
+
+![](./GAMES/DUNGEON/SCREEN02.GIF)
 
 ### Game of Life
 
@@ -412,8 +427,10 @@ Folder: [`TOOLS`](./TOOLS)
 - Free Pascal builds work: register usage in the assembler routines was fixed.
 - A form control in `LIBCTLS`: dialogs of typed fields (text, numbers, file
   names, paths, drives, choices, switches, passwords) checked as they are left.
-- Nine new games: Arkanoid, Chomp, Gomoku, Minesweeper, Reversi, Runner, Snake,
-  Sokoban and Solitaire.
+- `package_read` reads a file of a package into memory; the log view shows
+  `~XY` color codes.
+- Ten new games: Arkanoid, Chomp, Dungeon, Gomoku, Minesweeper, Reversi, Runner,
+  Snake, Sokoban and Solitaire.
 
 ## Known issues
 
