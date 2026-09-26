@@ -394,7 +394,7 @@ Folder: [`GAMES/SNAKE`](./GAMES/SNAKE)
 
 ### Sokoban
 
-Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level.
+Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level. Every tile is a 4 x 4 picture in half-block pixels, and the keeper and the crates slide from tile to tile.
 
 Keys: arrows or `W` `A` `S` `D` walk and push, `U` undo, `R` restart, `N`/`B` next/previous level, `ESC` pause menu (continue, restart level, quit to main menu).
 
@@ -586,11 +586,11 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
-- Game of Life, Arkanoid, Snake, Chomp and Runner draw their fields in
+- Game of Life, Arkanoid, Snake, Sokoban, Chomp and Runner draw their fields in
   half-block pixels, for four times as many cells (Life, Snake), twice the
-  height (Arkanoid), a maze with thin walls whose ghosts glide between cells
-  (Chomp), or a field half as tall again with drawn ladders and runners
-  (Runner).
+  height (Arkanoid), pictured tiles with sliding crates (Sokoban), a maze
+  with thin walls whose ghosts glide between cells (Chomp), or a field half as
+  tall again with drawn ladders and runners (Runner).
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
