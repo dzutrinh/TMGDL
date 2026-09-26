@@ -419,6 +419,30 @@ procedure	pixel_bar   (x, y, w, h: integer; color: byte);
 procedure	pixel_circle(cx, cy, r: integer; color: byte);
 procedure	pixel_disc  (cx, cy, r: integer; color: byte);
 
+{ ////////////////////////// LOW-RES 160 x 100 API ///////////////////////// }
+
+{ A 160 x 100 canvas in 16 colors, from a tweak of the 80 x 25 text mode   }
+{ (as CGA games did): every character row is cut down to 4 scan lines, so }
+{ the screen holds 100 rows, and each cell shows character 222, a right   }
+{ half block: its background is the left pixel, its foreground the right  }
+{ one. EGA/VGA only; an EGA shows rows of 3 scan lines. Drawing goes to a  }
+{ buffer that lores_flip copies to the screen. The text API does not work  }
+{ in this mode: call lores_done before dialogs, then redraw the screen     }
+
+const	LORES_W		= 160;
+	LORES_H		= 100;
+
+function	lores_init : boolean;		{ FALSE: no EGA/VGA or memory }
+procedure	lores_done;			{ back to 80 x 25 text        }
+function	lores_active: boolean;
+procedure	lores_clear(color: byte);
+procedure	lores_set  (x, y: integer; color: byte);
+function	lores_get  (x, y: integer): byte;
+procedure	lores_bar  (x, y, w, h: integer; color: byte);
+procedure	lores_text (x, y: integer; s: string; color: byte);	{ 3 x 5 font }
+function	lores_text_width(const s: string): integer;
+procedure	lores_flip;
+
 { //////////////////////////// DIALOG BOX API ////////////////////////////// }
 
 function	dialog_create (x, y, w, h: integer; shade: SHADING;
@@ -1765,6 +1789,181 @@ begin
 	for y := -r to r do
 		for x := -r to r do
 			if x * x + y * y <= r * r + r then pixel_set(cx + x, cy + y, color);
+end;
+
+{ ////////////////////////// LOW-RES 160 x 100 ///////////////////////////// }
+
+const	LORES_ROWS	= 100;
+	LORES_SIZE	= SCR_WIDTH * LORES_ROWS * 2;
+	LORES_BLANK	= SCR_WIDTH * 117 * 2;	{ what an EGA shows    }
+
+	{ 3 x 5 font of characters 32 to 95: bit 3 * row + column }
+	LORES_FONT	: array[32..95] of word = (
+		  $0000, $2092, $0000, $5F7D, $0000, $42A1, $0000, $0012,
+		  $224A, $2922, $0155, $05D0, $1400, $01C0, $2000, $12A4,
+		  $7B6F, $749A, $73E7, $79A7, $49ED, $79CF, $7BCF, $24A7,
+		  $7BEF, $79EF, $0410, $0000, $4454, $0E38, $1511, $20A7,
+		  $0000, $5BEA, $3AEB, $624E, $3B6B, $72CF, $12CF, $6B4E,
+		  $5BED, $7497, $2B24, $5AED, $7249, $5BFD, $5B6B, $2B6A,
+		  $12EB, $676A, $5AEB, $388E, $2497, $7B6D, $2B6D, $5FED,
+		  $5AAD, $24AD, $72A7, $0000, $0000, $0000, $0000, $0000);
+
+type	LORES_DATA	= array[0..LORES_SIZE - 1] of byte;
+	PLORES_DATA	= ^LORES_DATA;
+
+const	LORES_BUF	: PLORES_DATA = nil;
+
+{ 8: VGA, 1: EGA, 0: neither }
+function	lores_adapter: byte; assembler;
+asm
+	push	bx			{ EBX must survive calls under FPC }
+	mov	ax, $1A00		{ VGA: read display combination     }
+	int	$10
+	cmp	al, $1A
+	jne	@ega
+	cmp	bl, 7
+	jb	@ega
+	mov	al, 8
+	jmp	@done
+@ega:
+	mov	ah, $12			{ EGA: get configuration            }
+	mov	bl, $10
+	int	$10
+	mov	al, 0
+	cmp	bl, $10
+	je	@done
+	mov	al, 1
+@done:
+	pop	bx
+end;
+
+function	lores_active: boolean;
+begin
+	lores_active := LORES_BUF <> nil;
+end;
+
+function	lores_init: boolean;
+var	card,
+	v	: byte;
+	i	: word;
+begin
+	lores_init := FALSE;
+	card := lores_adapter;
+	if card = 0 then exit;
+	if LORES_BUF = nil then
+	begin
+		LORES_BUF := ltx_malloc(LORES_SIZE);
+		if LORES_BUF = nil then exit;
+	end;
+	ltx_setmode(CO80);
+	if card = 8 then
+	begin
+		{ 8-dot characters, so that both halves of a cell are 4 dots }
+		outportb($3C4, 0); outportb($3C5, 1);		{ sequencer reset   }
+		outportb($3C4, 1); outportb($3C5, inportb($3C5) or 1);
+		outportb($3C2, inportb($3CC) and $F3);		{ 25 MHz dot clock  }
+		outportb($3C4, 0); outportb($3C5, 3);
+		v := inportb($3DA);				{ no pixel panning  }
+		outportb($3C0, $33);
+		outportb($3C0, 0);
+		v := 3;
+	end
+	else	v := 2;
+	outportb($3D4, 9);
+	outportb($3D5, (inportb($3D5) and $E0) or v);		{ rows of v+1 lines }
+	cursor(CURSOR_OFF);
+	blink(BLINK_OFF);
+	for i := 0 to LORES_SIZE div 2 - 1 do
+	begin
+		LORES_BUF^[i shl 1] := 222;
+		LORES_BUF^[i shl 1 + 1] := 0;
+	end;
+	{ blank what lies past the 100 rows too }
+	for i := 0 to LORES_BLANK div 2 - 1 do
+{$ifndef FPC}
+		pword(VIDEO_RAM + i shl 1)^ := 222;
+{$else}
+		MEMW[VSEG_ADDR:i shl 1] := 222;
+{$endif}
+	lores_init := TRUE;
+end;
+
+procedure	lores_done;
+begin
+	if LORES_BUF = nil then exit;
+	ltx_free(LORES_BUF);
+	LORES_BUF := nil;
+	ltx_setmode(CO80);
+end;
+
+procedure	lores_clear(color: byte);
+var	i	: word;
+begin
+	if LORES_BUF = nil then exit;
+	color := (color and $0F) * $11;
+	for i := 0 to LORES_SIZE div 2 - 1 do LORES_BUF^[i shl 1 + 1] := color;
+end;
+
+procedure	lores_set(x, y: integer; color: byte);
+var	o	: word;
+begin
+	if (LORES_BUF = nil) or (x < 0) or (x >= LORES_W) or (y < 0) or (y >= LORES_H) then exit;
+	o := (y * SCR_WIDTH + x shr 1) shl 1 + 1;
+	if odd(x) then
+		LORES_BUF^[o] := (LORES_BUF^[o] and $F0) or (color and $0F)
+	else	LORES_BUF^[o] := (LORES_BUF^[o] and $0F) or ((color and $0F) shl 4);
+end;
+
+function	lores_get(x, y: integer): byte;
+var	o	: word;
+begin
+	lores_get := 0;
+	if (LORES_BUF = nil) or (x < 0) or (x >= LORES_W) or (y < 0) or (y >= LORES_H) then exit;
+	o := (y * SCR_WIDTH + x shr 1) shl 1 + 1;
+	if odd(x) then
+		lores_get := LORES_BUF^[o] and $0F
+	else	lores_get := LORES_BUF^[o] shr 4;
+end;
+
+procedure	lores_bar(x, y, w, h: integer; color: byte);
+var	i, j	: integer;
+begin
+	for j := y to y + h - 1 do
+		for i := x to x + w - 1 do lores_set(i, j, color);
+end;
+
+procedure	lores_text(x, y: integer; s: string; color: byte);
+var	i, r, c	: integer;
+	ch	: byte;
+	bits	: word;
+begin
+	for i := 1 to length(s) do
+	begin
+		ch := ord(upcase(s[i]));
+		if (ch >= 32) and (ch <= 95) then
+		begin
+			bits := LORES_FONT[ch];
+			for r := 0 to 4 do
+				for c := 0 to 2 do
+					if bits and (1 shl (r * 3 + c)) <> 0 then lores_set(x + c, y + r, color);
+		end;
+		inc(x, 4);
+	end;
+end;
+
+function	lores_text_width(const s: string): integer;
+begin
+	if s = '' then lores_text_width := 0 else lores_text_width := length(s) * 4 - 1;
+end;
+
+procedure	lores_flip;
+begin
+	if LORES_BUF = nil then exit;
+{$ifndef FPC}
+	move(LORES_BUF^, VIDEO_RAM^, LORES_SIZE);
+{$else}
+	dosmemput(VSEG_ADDR, 0, LORES_BUF^, LORES_SIZE);
+{$endif}
 end;
 
 function	dialog_create(x, y, w, h: integer; shade: SHADING;

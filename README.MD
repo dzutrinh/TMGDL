@@ -20,7 +20,7 @@ Supported compilers:
 | --- | --- | --- |
 | [2048](#2048) | 1.4 | Slide and merge tiles to reach 2048 |
 | [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
-| [Chomp](#chomp) | 1.0 | Maze game: eat the dots, avoid four ghosts |
+| [Chomp](#chomp) | 1.0 | Maze game in 160 x 100 colours, in the style of Paku Paku |
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
@@ -57,7 +57,7 @@ its menu (in 2048, with `M`).
 
 | Unit | Contents |
 | --- | --- |
-| `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, [half-block pixels](#half-block-pixels), boxes, dialogs, keyboard, millisecond timer |
+| `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, [half-block pixels](#half-block-pixels), [160 x 100 mode](#low-res-160-x-100-mode), boxes, dialogs, keyboard, millisecond timer |
 | `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box, colored log view, [forms](#forms), [high-score tables](#high-score-tables) |
 | `LIBUTIL` | Files, folders, drives, configuration and text files, CRC32, message boxes |
 | `LIBPACK` | Package (resource archive) files: create, extract, read into memory, add, delete, verify, self-extractors |
@@ -129,6 +129,31 @@ pixel_circle(40, 25, 12, 10);
 pixel_disc(40, 25, 5, 15);
 pixel_set(1, 1, 4);
 if pixel_get(1, 1) = 4 then ...
+```
+
+### Low-res 160 x 100 mode
+
+For finer graphics, `LIBTEXT` can switch an EGA or VGA card to the trick the
+CGA games of the 1980s used (Paku Paku among them): the 80 x 25 text mode with
+every character row cut down to 4 scan lines, so that 100 rows fit on the
+screen, and every cell showing character 222, a right half block. The
+background colour of a cell is its left pixel and the foreground its right
+one: 160 x 100 pixels in 16 colours (`LORES_W` x `LORES_H`). On VGA the cells
+are made 8 dots wide, so both halves are the same; an EGA shows rows of 3 scan
+lines, a little flatter. Drawing goes to a buffer that `lores_flip` shows at
+once. The text API does not work in this mode, so a program calls
+`lores_done` (back to 80 x 25 text) before its dialogs and redraws its screen.
+A 3 x 5 font writes letters, digits and signs.
+
+```pascal
+if not lores_init then die(-1, 'EGA/VGA adapter is required.');
+lores_clear(0);
+lores_bar(10, 10, 20, 5, 12);
+lores_set(80, 50, 15);
+lores_text(2, 2, 'SCORE 1200', 14);     { 4 pixels a character }
+lores_flip;
+...
+lores_done;
 ```
 
 ### PC-speaker sound
@@ -260,7 +285,7 @@ Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 
 ### Chomp
 
-A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board. The maze is drawn in half-block pixels: the walls are thin outlines, and the ghosts and the player glide from cell to cell.
+A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board. Like Paku Paku, the DOS dot-eater of 2011, it plays in the [160 x 100 mode](#low-res-160-x-100-mode) of an EGA/VGA text screen: an arcade-shaped 28 x 31 maze with thin double walls, 5 x 5 sprites that move smoothly (a chomping mouth, ghosts whose eyes look where they go, blue ghosts with faces, eyes flying home), the score above the maze and the lives and fruit beside it, waka-waka on the PC speaker.
 
 Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
 
@@ -586,11 +611,12 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
-- Game of Life, Arkanoid, Snake, Sokoban, Chomp and Runner draw their fields in
+- Game of Life, Arkanoid, Snake, Sokoban and Runner draw their fields in
   half-block pixels, for four times as many cells (Life, Snake), twice the
-  height (Arkanoid), pictured tiles with sliding crates (Sokoban), a maze
-  with thin walls whose ghosts glide between cells (Chomp), or a field half as
-  tall again with drawn ladders and runners (Runner).
+  height (Arkanoid), pictured tiles with sliding crates (Sokoban), or a field
+  half as tall again with drawn ladders and runners (Runner).
+- A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
+  3 x 5 font; Chomp plays in it, in the style of Paku Paku.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
