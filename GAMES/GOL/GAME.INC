@@ -46,7 +46,7 @@ begin
 	if not load(GAME_COLONY, FILE_COLONY) then init(GAME_COLONY);
 
 	cursor(CURSOR_OFF);
-        blink(BLINK_ON);
+        blink(BLINK_OFF);	{ bright colors for both cells of a text cell }
 
         mOpt := menuCreate;
         menuAppend(mOpt, '     ALIVE: '+COLOR_NAMES[GAME_CONFIG.c_alive], CMD_OPT_ALIVE,  FALSE, nil);
@@ -92,6 +92,7 @@ begin
 
 	cursor(CURSOR_ON);
 	ltx_done;
+	blink(BLINK_ON);
 
 	writeln(' _______    _______    _____   ');
 	writeln('|     __|  |       |  |     |_ ');
@@ -344,7 +345,7 @@ begin
                 while x + PATTERNS_LIST[c].w - 1 >= FIELD_W do dec(x);
                 while y + PATTERNS_LIST[c].h - 1 >= FIELD_H do dec(y);
 
-               	block_put(@PATTERNS_LIST[c], x shl 1 + 1, y + 1, $8F);
+               	patternDraw(@PATTERNS_LIST[c], x, y);
                 key := getkey_single;
                 case key of
                 KEY_SHIFT_TAB:	if c > 1 then dec(c) else c := PATTERNS_MAX;

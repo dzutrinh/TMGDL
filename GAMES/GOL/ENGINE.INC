@@ -126,22 +126,58 @@ begin
 	end;
 end;
 
-procedure       cellular(const ctx: COLONY; x, y: integer; active: boolean);
-var	clr	: integer;
+{ the color of a cell }
+function	cellColor(const ctx: COLONY; x, y: integer): byte;
 begin
-        clr := GAME_CONFIG.c_dead;
-	if ctx^.field[cell(x, y)] = C_ALIVE then clr := GAME_CONFIG.c_alive;
-        if active then clr := 8 shl 4 + clr;
-	prints(BOARD_X + (x shl 1), BOARD_Y + y, clr, FIELD_C);
+	if ctx^.field[cell(x, y)] = C_ALIVE then
+		cellColor := GAME_CONFIG.c_alive
+	else	cellColor := GAME_CONFIG.c_dead;
 end;
 
+{ one cell, a half-block pixel; the cursor shows in its own colors }
+procedure       cellular(const ctx: COLONY; x, y: integer; active: boolean);
+var	clr	: byte;
+begin
+	clr := cellColor(ctx, x, y);
+	if active then
+		if ctx^.field[cell(x, y)] = C_ALIVE then clr := CURSOR_ALIVE else clr := CURSOR_DEAD;
+	pixel_set((BOARD_X - 1) + x, (BOARD_Y - 1) * 2 + y, clr);
+end;
+
+{ the whole field, a text cell (two cells) at a time: the upper half }
+{ block in the color of the upper cell, on the color of the lower one }
 procedure	render(const ctx: COLONY);
-var	x, y	: integer;
+var	x, row	: integer;
+	top, bot: byte;
 begin
 	if ctx = nil then exit;
 
-	for y := 0 to FIELD_H-1 do
-	for x := 0 to FIELD_W-1 do	cellular(ctx, x, y, FALSE);
+	for row := 0 to BOARD_H-1 do
+	for x := 0 to FIELD_W-1 do
+	begin
+		top := cellColor(ctx, x, row * 2);
+		bot := cellColor(ctx, x, row * 2 + 1);
+		if top = bot then
+			printc(BOARD_X + x, BOARD_Y + row, top, #219)
+		else	printc(BOARD_X + x, BOARD_Y + row, (bot shl 4) or top, #223);
+	end;
+end;
+
+{ a pattern over the field, where it will be put: its live cells bright }
+procedure	patternDraw(blk: PBLOCK; x, y: integer);
+var	i, j	: integer;
+	q	: pchar;
+begin
+	if blk = nil then exit;
+	q := blk^.data;
+	for j := 0 to blk^.h - 1 do
+		for i := 0 to blk^.w - 1 do
+		begin
+			if q^ <> #0 then
+				pixel_set((BOARD_X - 1) + x + i, (BOARD_Y - 1) * 2 + y + j, PATTERN_ON)
+			else	pixel_set((BOARD_X - 1) + x + i, (BOARD_Y - 1) * 2 + y + j, PATTERN_OFF);
+			inc(q);
+		end;
 end;
 
 procedure	evolve(var ctx: COLONY);

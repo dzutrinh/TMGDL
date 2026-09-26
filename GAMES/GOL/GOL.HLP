@@ -8,7 +8,7 @@
 The ~0FGame of Life~07 was invented by the mathematician
 ~0FJohn Conway~07 in 1970. It is not played: you set
 up a colony of cells, then watch it live. Each
-cell of the ~0F25 x 25~07 field is alive or dead, and
+cell of the ~0F50 x 50~07 field is alive or dead, and
 every generation all the cells change at once by
 counting their eight neighbours:
 

@@ -248,7 +248,7 @@ Folder: [`GAMES/2048`](./GAMES/2048)
 
 ### Arkanoid
 
-Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds.
+Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds. The field is drawn in half-block pixels: the ball is one square pixel and every row of a level is two thin rows of bricks, so the ball has twice the room to move.
 
 Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
 
@@ -286,7 +286,7 @@ Folder: [`GAMES/DUNGEON`](./GAMES/DUNGEON)
 
 ### Game of Life
 
-Conway's cellular automaton: cells are born and die by the number of their neighbours. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
+Conway's cellular automaton: cells are born and die by the number of their neighbours. The field has 50 x 50 cells, drawn as half-block pixels, two to a text cell. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
 
 Keys: `SPACE` step/auto, `ENTER` next generation, `LEFT`/`RIGHT` speed, `P` pause, `R` random colony, `ESC` back. In the editor: arrows or `W` `A` `S` `D` move, `SPACE` toggles a cell, `P` places a pattern (`TAB` picks it, `ENTER` drops it), `C` clears, `F` fills.
 
@@ -382,7 +382,7 @@ Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
 
 ### Snake
 
-Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board.
+Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board. The field is 56 x 46 cells of half-block pixels, four times as many as a text grid would hold.
 
 Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
 
@@ -586,6 +586,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
+- Game of Life, Arkanoid and Snake draw their fields in half-block pixels, for
+  four times as many cells (Life, Snake) or twice the height (Arkanoid).
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in

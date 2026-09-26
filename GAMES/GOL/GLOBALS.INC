@@ -4,15 +4,19 @@
 const	C_ALIVE	= 1;				{ denote an alive cell }
 	C_DEAD	= 0;				{ denote a dead cell   }
 
-        { field parameters }
-	FIELD_W	= SCR_HEIGHT;			{ field width          }
-	FIELD_H	= SCR_HEIGHT;			{ field height         }
-	FIELD_C	= #177#177;			{ field pixel          }
+        { field parameters: a cell is a half-block pixel, two in a text row }
+	FIELD_W	= SCR_HEIGHT * 2;		{ field width          }
+	FIELD_H	= SCR_HEIGHT * 2;		{ field height         }
 
-	BOARD_W	= FIELD_W shl 1;		{ board dimensions     }
-	BOARD_H	= FIELD_H;
+	BOARD_W	= FIELD_W;			{ board dimensions, in }
+	BOARD_H	= FIELD_H div 2;		{ text cells           }
 	BOARD_X	= 1;				{ board coordinates    }
-	BOARD_Y	= (SCR_HEIGHT - BOARD_H) shr 1 + 1;
+	BOARD_Y	= 1;
+
+	CURSOR_ALIVE	= 14;			{ the editor's cursor  }
+	CURSOR_DEAD	= 12;
+	PATTERN_ON	= 14;			{ a pattern being put  }
+	PATTERN_OFF	= 8;
 
         PANEL_X	= 53;
         PANEL_Y = 1;
@@ -90,7 +94,7 @@ const   FILE_CONFIG	: string[12] = 'GOL.CNF';
                  step   : FALSE;
 		 invert	: FALSE;
 		 c_alive: 15;
-		 c_dead	: 3;
+		 c_dead	: 1;
 		 sound	: TRUE);
 
 var 	vscreen		: SCREEN;		{ double-buffering   }
