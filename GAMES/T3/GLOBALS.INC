@@ -47,10 +47,10 @@ type    INDEX_TYPE = 1..BOARD_SIZE;	{ indexing to the board }
 		board	: GAME_BOARD;	{ our game board          }
 		player	: COLOR_TYPE;	{ current player          }
 
-		{ just counters }
-		cWinX,
-		cWinO,
-		cDraw	: PCOUNTER;
+		{ games won and tied }
+		winX,
+		winO,
+		ties	: longint;
 	end;
 
 const	CMD_GAME_START	= 1000;
@@ -68,10 +68,20 @@ const	CMD_GAME_START	= 1000;
         CMD_OPT_COLOR_O	= 1022;
         CMD_OPT_SOUND	= 1023;
 
-	CELL_WIDTH	= 8;
-	CELL_HEIGHT	= 4;
-	BOARD_FRAME_WIDTH	= 28;
-	BOARD_FRAME_HEIGHT	= 15;
+	BOARD_FRAME_WIDTH	= 82;
+	BOARD_FRAME_HEIGHT	= 82;
+
+	{ the board in the 160 x 100 mode }
+	BX		= 39;		{ top left pixel of the board      }
+	BY		= 6;
+	CELL		= 26;		{ a square                         }
+	LINE		= 2;		{ the lines between them           }
+	PITCH		= CELL + LINE;
+	STATUS_Y	= 92;
+	GRID_C		= 7;
+	WIN_C		= 14;
+	PIECE_STEPS	= 12;		{ frames to draw a mark            }
+	PIECE_TIME	= 15;		{ ms a frame                       }
 
         FILE_CONFIG	: string[12] = 'T3.CNF';
         FILE_HELP	: string[12] = 'T3.HLP';
@@ -79,64 +89,33 @@ const	CMD_GAME_START	= 1000;
 	MENU_TEXT_CLR	: byte = $07;
 	MENU_ACCENT_CLR	: byte = $5F;
 
-	STATUS_X	= 60;
-	STATUS_Y	= 8;
-
-	INFO_X		= 5;
-	INFO_Y		= 9;
-
 	HUMAN		= NOUGHT;	{ minimizer's side      }
 	COMPUTER	= CROSS;	{ maximizer's side      }
         COLOR_HILITE	= 1;		{ cell hilighting color }
 
-	BOARD_FRAME	: array[1..15] of string[60] =
-			('~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-                         '~08‹‹‹‹‹‹‹‹~78ﬂ~08‹‹‹‹‹‹‹~78ﬂ~08‹‹‹‹‹‹‹‹',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-                         '~08‹‹‹‹‹‹‹‹~78ﬂ~08‹‹‹‹‹‹‹~78ﬂ~08‹‹‹‹‹‹‹‹',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        €       €        ',
-			 '~08        ﬂ       ﬂ        ');
+	HEART_W		= 17;
+	HEART_H		= 14;
+	HEART_IMG	: array[0..HEART_H-1] of string[HEART_W] =
+			('..XXXX.....XXXX..',
+			 '.XXXXXX...XXXXXX.',
+			 'XXXXXXXX.XXXXXXXX',
+			 'XXXXXXXXXXXXXXXXX',
+			 'XXXXXXXXXXXXXXXXX',
+			 'XXXXXXXXXXXXXXXXX',
+			 '.XXXXXXXXXXXXXXX.',
+			 '..XXXXXXXXXXXXX..',
+			 '...XXXXXXXXXXX...',
+			 '....XXXXXXXXX....',
+			 '.....XXXXXXX.....',
+			 '......XXXXX......',
+			 '.......XXX.......',
+			 '........X........');
+	MINI_HEART	: array[0..4] of string[7] =
+			('.XX.XX.', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...');
 
-	GAME_LOGO	: array[1..4] of string[50] =
-		('~08⁄¬ø ˘ ⁄ø    ⁄¬ø ⁄ø ⁄ø    ⁄¬ø ⁄ø ⁄ø',
-		 '~04 ≥  ≥ ≥≥  ~05   ≥  √≥ ≥≥  ~09   ≥  ≥≥ √ ',
-		 '~0C ≥  ≥ ≥   ~0D   ≥  ≥≥ ≥   ~0B   ≥  ≥≥ ≥≥',
-		 '~0F Ÿ  Ÿ ¿Ÿ     Ÿ  ŸŸ ¿Ÿ     Ÿ  ¿Ÿ ¿Ÿ');
-
-	{ built-in player icons }
-	ICON_CROSS	: BLOCK_TYPE =
-        	(x: 0; y: 0; w: 5; h: 3; size: 15;
-		 data:'ﬂ‹ ‹ﬂ'+
-                      ' ‹ﬂ‹ '+
-                      'ﬂ   ﬂ'; attach: FALSE);
-	ICON_NOUGHT	: BLOCK_TYPE =
-        	(x: 0; y: 0; w: 5; h: 3; size: 15;
-		 data:'‹ﬂﬂﬂ‹'+
-                      '€   €'+
-                      ' ﬂﬂﬂ '; attach: FALSE);
-	ICON_HEART	: BLOCK_TYPE =
-        	(x: 0; y: 0; w: 5; h: 3; size: 15;
-		 data:'‹€‹€‹'+
-                      'ﬂ€€€ﬂ'+
-                      '  ﬂ  '; attach: FALSE);
-
-        BLOCK_CROSS	: PBLOCK = nil;	{ player icons          }
-        BLOCK_NOUGHT	: PBLOCK = nil;
         IS_HEART	: array[boolean] of char        = (' ', #3);
         PLAYER_SYMBOL	: array[COLOR_TYPE] of char     = ('X','O');
-	TEXT_LEVEL	: array[AI_LEVEL] of string[24] =
-			('   ~05AI~07=~03EASY    ',
-			 '  ~05AI~07=~06MEDIUM   ',
-			 '   ~05AI~07=~04HARD    ');
+	LEVEL_NAMES	: array[AI_LEVEL] of string[6] = ('EASY', 'MEDIUM', 'HARD');
 
 	APP_DEFAULT_CFG	: APP_CONFIG =	{ default configuration }
         	(mode	: PVA;

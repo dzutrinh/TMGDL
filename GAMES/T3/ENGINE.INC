@@ -8,10 +8,8 @@ function	boardHeight: longint;                                                  
 function	boardGet(const board: GAME_BOARD; c, r: INDEX_TYPE): TILE_TYPE;                 forward;
 procedure	boardSet(var board: GAME_BOARD; c, r: INDEX_TYPE; v: COLOR_TYPE);               forward;
 function	boardAvail(const board: GAME_BOARD): boolean;                                   forward;
-procedure	boardDrawPiece(const board: GAME_BOARD; c, r: INDEX_TYPE);                      forward;
 function	boardFull(const board: GAME_BOARD): boolean;                                    forward;
-procedure	boardDraw(const board: GAME_BOARD);                                             forward;
-procedure	boardJump(var board: GAME_BOARD; c, r: INDEX_TYPE; active: boolean);            forward;
+procedure	boardDraw(const board: GAME_BOARD; cc, cr: longint);                             forward;
 procedure	boardPut(var board: GAME_BOARD; c, r: INDEX_TYPE; piece: COLOR_TYPE);           forward;
 procedure	boardClear(var board: GAME_BOARD);                                              forward;
 function	boardOpponent(player: COLOR_TYPE): COLOR_TYPE;                                  forward;
@@ -69,44 +67,142 @@ begin
 	boardFull := not boardAvail(board);
 end;
 
-procedure	boardDrawPiece(const board: GAME_BOARD; c, r: INDEX_TYPE);
-var	x, y	: integer;
+{ top left pixel of a square }
+function	cellX(c: longint): longint;
 begin
-        x := board.x + 2 + (c-1) * CELL_WIDTH;
-        y := board.y + 1 + (r-1) * (CELL_HEIGHT+1);
-        case board.board[r, c] of
-        CROSS:  block_blit(BLOCK_CROSS , x, y, GAME_CONFIG.clrX, FALSE);
-        NOUGHT: block_blit(BLOCK_NOUGHT, x, y, GAME_CONFIG.clrO, FALSE);
-        end;
+	cellX := BX + (c-1) * PITCH;
 end;
 
-procedure	boardDraw(const board: GAME_BOARD);
+function	cellY(r: longint): longint;
+begin
+	cellY := BY + (r-1) * PITCH;
+end;
+
+{ the first n points of a line, with a brush of 2 x 2 pixels }
+procedure	brushLine(x0, y0, x1, y1, n: longint; color: byte);
+var	dx, dy,
+	sx, sy,
+	err, e2	: longint;
+begin
+	dx := abs(x1 - x0);
+	dy := -abs(y1 - y0);
+	if x0 < x1 then sx := 1 else sx := -1;
+	if y0 < y1 then sy := 1 else sy := -1;
+	err := dx + dy;
+	while n > 0 do
+	begin
+		lores_bar(x0, y0, 2, 2, color);
+		dec(n);
+		if (x0 = x1) and (y0 = y1) then break;
+		e2 := 2 * err;
+		if e2 >= dy then
+		begin
+			inc(err, dy);
+			inc(x0, sx);
+		end;
+		if e2 <= dx then
+		begin
+			inc(err, dx);
+			inc(y0, sy);
+		end;
+	end;
+end;
+
+{ the angle of (x, y) from twelve o'clock, clockwise, 0 to 1023: the }
+{ 'diamond angle', which needs no trigonometry                        }
+function	clockAngle(x, y: longint): longint;
+var	u, v	: longint;
+begin
+	u := -y;		{ turned a quarter: twelve o'clock is 0 }
+	v := x;
+	if (u = 0) and (v = 0) then
+		clockAngle := 0
+	else if v >= 0 then
+		if u >= 0 then
+			clockAngle := 256 * v div (u + v)
+		else	clockAngle := 256 + 256 * (-u) div (-u + v)
+	else	if u < 0 then
+			clockAngle := 512 + 256 * (-v) div (-u - v)
+		else	clockAngle := 768 + 256 * u div (u - v);
+end;
+
+{ a mark in square (c, r), drawn up to step of PIECE_STEPS: the cross }
+{ stroke by stroke, the nought and the heart round the clock          }
+procedure	pieceDraw(c, r: longint; piece: TILE_TYPE; step: longint);
+var	x, y,
+	i, j, n,
+	dx, dy	: longint;
+	inside	: boolean;
+begin
+	x := cellX(c);
+	y := cellY(r);
+	case piece of
+	CROSS:	begin
+			n := 2 * 17 * step div PIECE_STEPS;
+			brushLine(x + 4, y + 4, x + 20, y + 20, n, GAME_CONFIG.clrX);
+			if n > 17 then
+				brushLine(x + 20, y + 4, x + 4, y + 20, n - 17, GAME_CONFIG.clrX);
+		end;
+	NOUGHT:	for j := 0 to CELL - 1 do
+			for i := 0 to CELL - 1 do
+			begin
+				dx := 2 * i - (CELL - 1);
+				dy := 2 * j - (CELL - 1);
+				if GAME_CONFIG.isHeart then
+					inside := (j >= 6) and (j < 6 + HEART_H) and (i >= 4) and (i < 4 + HEART_W) and
+						  (HEART_IMG[j - 6][i - 3] = 'X')
+				else	inside := (dx * dx + dy * dy >= 225) and (dx * dx + dy * dy <= 361);
+				if inside and (clockAngle(dx, dy) < 1024 * step div PIECE_STEPS) then
+					lores_set(x + i, y + j, GAME_CONFIG.clrO);
+			end;
+	end;
+	{ a shine on the heart }
+	if (piece = NOUGHT) and GAME_CONFIG.isHeart and (step = PIECE_STEPS) then
+		lores_set(x + 6, y + 8, 15);
+end;
+
+{ the grid, the marks and the cursor on (cc, cr) unless cc is 0 }
+procedure	boardDraw(const board: GAME_BOARD; cc, cr: longint);
 var	c, r	: INDEX_TYPE;
-	i	: longint;
 begin
-	for i := 1 to high(BOARD_FRAME) do
-		print(board.x, board.y + i-1, BOARD_FRAME[i]);
+	lores_bar(BX + CELL, BY, LINE, 3 * CELL + 2 * LINE, GRID_C);
+	lores_bar(BX + 2 * CELL + LINE, BY, LINE, 3 * CELL + 2 * LINE, GRID_C);
+	lores_bar(BX, BY + CELL, 3 * CELL + 2 * LINE, LINE, GRID_C);
+	lores_bar(BX, BY + 2 * CELL + LINE, 3 * CELL + 2 * LINE, LINE, GRID_C);
 	for r := 1 to BOARD_SIZE do
-	for c := 1 to BOARD_SIZE do boardDrawPiece(board, c, r);
+	for c := 1 to BOARD_SIZE do
+	begin
+		if (c = cc) and (r = cr) then
+			lores_bar(cellX(c), cellY(r), CELL, CELL, COLOR_HILITE)
+		else	lores_bar(cellX(c), cellY(r), CELL, CELL, 0);
+		pieceDraw(c, r, board.board[r, c], PIECE_STEPS);
+	end;
 end;
 
-procedure	boardJump(var board: GAME_BOARD; c, r: INDEX_TYPE; active: boolean);
-var	attr,
-	x, y	: integer;
+{ the line through three in a row, from square (c1, r1) to (c2, r2), }
+{ drawn up to step of PIECE_STEPS                                    }
+procedure	winLine(c1, r1, c2, r2, step: longint);
+var	x0, y0,
+	x1, y1	: longint;
 begin
-	boardDrawPiece(board, c, r);
+	x0 := cellX(c1) + 12 - (c2 - c1) * 5;
+	y0 := cellY(r1) + 12 - (r2 - r1) * 5;
+	x1 := cellX(c2) + 12 + (c2 - c1) * 5;
+	y1 := cellY(r2) + 12 + (r2 - r1) * 5;
+	brushLine(x0, y0, x1, y1, (ltx_max(abs(x1 - x0), abs(y1 - y0)) + 1) * step div PIECE_STEPS, WIN_C);
+end;
 
-        x := board.x + 1 + (c-1) * CELL_WIDTH;
-        y := board.y + 0 + (r-1) * (CELL_HEIGHT+1);
-
-        if active then attr := COLOR_HILITE else attr := CLEAR_COLOR;
-        attr := attr shl 4;
-		prints(x, y, attr, #223#223#223#223#223#223#223);
-        case board.board[r, c] of
-        CROSS:	attr := attr + GAME_CONFIG.clrX;
-        NOUGHT:	attr := attr + GAME_CONFIG.clrO;
-        end;
-        ltx_filla(x, y+1, CELL_WIDTH-1, CELL_HEIGHT-1, attr);
+{ a small mark, 7 pixels wide, for the panels }
+procedure	markMini(x, y: longint; piece: COLOR_TYPE);
+var	i, j	: longint;
+begin
+	if piece = CROSS then
+		lores_text_big(x, y, 'X', GAME_CONFIG.clrX, 2, 1)
+	else if not GAME_CONFIG.isHeart then
+		lores_text_big(x, y, 'O', GAME_CONFIG.clrO, 2, 1)
+	else	for j := 0 to 4 do
+			for i := 0 to 6 do
+				if MINI_HEART[j][i + 1] = 'X' then lores_set(x + i, y + j, GAME_CONFIG.clrO);
 end;
 
 procedure	boardPut(var board: GAME_BOARD; c, r: INDEX_TYPE; piece: COLOR_TYPE);

@@ -10,14 +10,12 @@ procedure	gamePlay;                                                       forwar
 
 { ////////////////////////////////////////////////////////////////////////// }
 
-procedure	gameStatus(redraw: boolean);                                    forward;
+procedure	gameStatus(text: string; color: byte);                          forward;
 procedure	gameShowVersion;                                                forward;
 procedure	gameBackground;                                                 forward;
-procedure	gameReset;                                                      forward;
 procedure	gameSwitchPlayer;                                               forward;
 function    gameWin(p: COLOR_TYPE): boolean;                           	forward;
 function	gameState: GAME_STATE;                                          forward;
-function	gameAbort: boolean;                                             forward;
 procedure	gameMoveHuman(c, r: integer);                          		forward;
 procedure	gameMoveComputer;                                               forward;
 procedure	gameAbout;                                                      forward;
@@ -25,9 +23,10 @@ procedure	gameHelp;                                                       forwar
 
 { ////////////////////////////////////////////////////////////////////////// }
 
-var	game	: GAME_TYPE;
-	mode,
-	notif	: PLABEL;
+var	game		: GAME_TYPE;
+	curC, curR	: longint;	{ the cursor, curC 0 when hidden   }
+	status		: string[40];	{ the line under the board          }
+	statusColor	: byte;
 
 procedure       gameInit(major, minor: longint; build: string);
 begin
@@ -54,12 +53,9 @@ begin
 
 	cursor(CURSOR_OFF);
 
-	game.cWinX  := counterCreate(0, STATUS_X,  STATUS_Y+4,  17, 0, 0, SHADE_BLUE, '~0BX ~07WINS' );
-	game.cWinO  := counterCreate(0, STATUS_X,  STATUS_Y+8,  17, 0, 0, SHADE_BLUE, '~0BO ~07WINS' );
-	game.cDraw  := counterCreate(0, STATUS_X,  STATUS_Y+12, 17, 0, 0, SHADE_CYAN,  'TIES'  );
-	notif	    := labelCreate(-1, 24, 20, '');
-	mode	    := labelCreate(INFO_X + 2, INFO_Y + 11, 12, '');
-
+	game.winX := 0;
+	game.winO := 0;
+	game.ties := 0;
 	boardInit(game.board, ltx_centerx(boardWidth)+1, ltx_centery(boardHeight)+2);
 end;
 
@@ -67,11 +63,6 @@ procedure	gameShutdown;
 begin
         config_save(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG));
 
-	labelDestroy(mode);
-	labelDestroy(notif);
-	counterDestroy(game.cWinX);
-	counterDestroy(game.cWinO);
-	counterDestroy(game.cDraw);
 	cursor(CURSOR_ON);
 	ltx_done;
 
@@ -131,55 +122,68 @@ begin
 			 'CODED BY ~05TRINH D.D. NGUYEN');
 end;
 
-procedure	gameStatus(redraw: boolean);
-var	i	: integer;
+{ a key and what it does, in the left panel }
+procedure	gameKey(y: longint; key, text: string);
 begin
-	if redraw then
-	begin
-		gameShowVersion;
-
-		for i := 1 to 4 do center(i+1, GAME_LOGO[i]);
-
-		shaded_box(INFO_X, INFO_Y, 16, 9, SHADE_WHITE, AF_LEFT, 'HELP');
-		shaded_box(INFO_X, INFO_Y+10, 16, 3, SHADE_WHITE, AF_LEFT, 'MODE');
-		shaded_box(STATUS_X, STATUS_Y, 17, 3, SHADE_WHITE, AF_LEFT, 'TURN');
-
-		print(INFO_X+2, INFO_Y+1, '~0BSPACE: ~03PLAY');
-		print(INFO_X+2, INFO_Y+2, '~0A    W: ~02UP');
-		print(INFO_X+2, INFO_Y+3, '~0A    A: ~02LEFT');
-		print(INFO_X+2, INFO_Y+4, '~0A    S: ~02DOWN');
-		print(INFO_X+2, INFO_Y+5, '~0A    D: ~02RIGHT');
-		print(INFO_X+2, INFO_Y+6, '~0E    H: ~06HELP');
-		print(INFO_X+2, INFO_Y+7, '~0C  ESC: ~04QUIT');
-	end;
-
-	print(STATUS_X+7, STATUS_Y+1, '~07['+gamePlayerSymbol(game.player)+'~07]');
-
-	labelShow(mode);
-	case GAME_CONFIG.mode of
-	PVP: labelSetText(mode, '  ~01VS ~09HUMAN  ');
-	PVA: labelSetText(mode, TEXT_LEVEL[GAME_CONFIG.level]);
-	end;
-
-	counterShow(game.cWinX);
-	counterShow(game.cWinO);
-	counterShow(game.cDraw);
+	lores_text(1, y, key, 15);
+	lores_text(1 + length(key) * 4, y, ' ' + text, 7);
 end;
 
-procedure	gameReset;
+{ the whole screen: panels, board, cursor and the line of text }
+procedure	gameScreen;
 begin
-	clear($07);
+	lores_clear(0);
+	lores_text_big(1, 2,  'TIC', 12, 2, 2);
+	lores_text_big(1, 14, 'TAC', 13, 2, 2);
+	lores_text_big(1, 26, 'TOE', 9,  2, 2);
+	gameKey(44, 'SPC', 'PLAY');
+	gameKey(52, 'H', 'HELP');
+	gameKey(60, '?', 'INFO');
+	gameKey(68, 'ESC', 'QUIT');
+	if GAME_CONFIG.mode = PVP then
+		lores_text(1, 82, 'VS HUMAN', 15)
+	else
+	begin
+		lores_text(1, 82, 'VS CPU', 15);
+		lores_text(1, 90, LEVEL_NAMES[GAME_CONFIG.level], 11);
+	end;
 
-	boardClear(game.board);
-	boardDraw (game.board);
+	lores_text(126, 2, 'TURN', 14);
+	markMini(126, 10, game.player);
+	markMini(126, 26, CROSS);
+	lores_text(135, 26, 'WINS', 7);
+	lores_text(126, 34, ltoa(game.winX), 15);
+	markMini(126, 46, NOUGHT);
+	lores_text(135, 46, 'WINS', 7);
+	lores_text(126, 54, ltoa(game.winO), 15);
+	lores_text(126, 66, 'TIES', 7);
+	lores_text(126, 74, ltoa(game.ties), 15);
 
-	counterShow(game.cWinX);
-	counterShow(game.cWinO);
-	counterShow(game.cDraw);
+	boardDraw(game.board, curC, curR);
+	lores_text((LORES_W - lores_text_width(status)) div 2, STATUS_Y, status, statusColor);
+	lores_flip;
+end;
 
-	game.player := HUMAN;
+procedure	gameStatus(text: string; color: byte);
+begin
+	status      := text;
+	statusColor := color;
+	gameScreen;
+end;
 
-	gameStatus(TRUE);
+{ the mark just put in square (c, r) is drawn stroke by stroke }
+procedure	gameAnimate(c, r: longint);
+var	i	: longint;
+begin
+	gameScreen;
+	lores_bar(cellX(c), cellY(r), CELL, CELL, 0);
+	if (c = curC) and (r = curR) then lores_bar(cellX(c), cellY(r), CELL, CELL, COLOR_HILITE);
+	for i := 1 to PIECE_STEPS do
+	begin
+		pieceDraw(c, r, boardGet(game.board, c, r), i);
+		lores_flip;
+		sleep(PIECE_TIME);
+	end;
 end;
 
 procedure	gameSwitchPlayer;
@@ -187,41 +191,35 @@ begin
 	game.player := boardOpponent(game.player);
 end;
 
-function        gameWin(p: COLOR_TYPE): boolean;
+{ three of p in a row? the row goes from (c1, r1) to (c2, r2) }
+function	gameRow(p: COLOR_TYPE; var c1, r1, c2, r2: longint): boolean;
 var	i	: integer;
-begin
-        {$R-}
-	with game.board do
+
+	function	same(ca, ra, cb, rb, cc, rc: longint): boolean;
 	begin
-		for i := 1 to 3 do
-			if (equals(board[i,1], board[i,2], board[i,3]) and
-			   (board[i,1] = p)) then
-			begin
-				gameWin := TRUE;
-				exit;
-			end;
-		for i := 1 to 3 do
-			if (equals(board[1,i], board[2,i], board[3,i]) and
-			   (board[1,i] = p)) then
-			begin
-				gameWin := TRUE;
-				exit;
-			end;
-		if (equals(board[1,1], board[2,2], board[3,3]) and
-		   (board[1,1] = p)) then
-			begin
-				gameWin := TRUE;
-				exit;
-			end;
-		if (equals(board[1,3], board[2,2], board[3,1]) and
-		   (board[1,3] = p)) then
-			begin
-				gameWin := TRUE;
-				exit;
-			end;
+		same := (boardGet(game.board, ca, ra) = p) and (boardGet(game.board, cb, rb) = p) and
+			(boardGet(game.board, cc, rc) = p);
+		c1 := ca; r1 := ra;
+		c2 := cc; r2 := rc;
 	end;
-        {$R+}
-	gameWin := FALSE;
+
+begin
+	gameRow := TRUE;
+	for i := 1 to 3 do
+	begin
+		if same(1, i, 2, i, 3, i) then exit;
+		if same(i, 1, i, 2, i, 3) then exit;
+	end;
+	if same(1, 1, 2, 2, 3, 3) then exit;
+	if same(3, 1, 2, 2, 1, 3) then exit;
+	gameRow := FALSE;
+end;
+
+function        gameWin(p: COLOR_TYPE): boolean;
+var	c1, r1,
+	c2, r2	: longint;
+begin
+	gameWin := gameRow(p, c1, r1, c2, r2);
 end;
 
 function	gameState: GAME_STATE;
@@ -233,24 +231,13 @@ begin
 	else	gameState := GAME_PLAYING;
 end;
 
-function	gameAbort: boolean;
-begin
-	labelSetText(notif, 'WAIT');
-	gameAbort := query(SHADE_RED, '~0CABORT CURRENT GAME (~0FY~0C/~0FN~0C)?');
-end;
-
 procedure	gameMoveHuman(c, r: integer);
 begin
 	if GAME_CONFIG.mode = PVA then
-	begin
-		boardPut(game.board, c, r, HUMAN);
-		gameSwitchPlayer;
-	end
-	else
-	begin
-		boardPut(game.board, c, r, game.player);
-		gameSwitchPlayer;
-	end;
+		boardPut(game.board, c, r, HUMAN)
+	else	boardPut(game.board, c, r, game.player);
+	gameAnimate(c, r);
+	gameSwitchPlayer;
 end;
 
 procedure	gameMoveComputer;
@@ -260,8 +247,56 @@ begin
 	begin
 		aiBestMove(game.board, c, r);
 		boardPut(game.board, c, r, COMPUTER);
+		gameAnimate(c, r);
 		gameSwitchPlayer;
 	end;
+end;
+
+{ the end of a game: a line through the row, and a message }
+function	gameOver(state: GAME_STATE): boolean;
+var	c1, r1,
+	c2, r2,
+	i	: longint;
+	p	: COLOR_TYPE;
+	who	: string[20];
+begin
+	curC := 0;
+	if state = GAME_DRAW then
+	begin
+		inc(game.ties);
+		snd_play(SFX_FALL);
+		gameStatus('A TIE! ENTER: NEXT GAME', 14);
+	end
+	else
+	begin
+		if state = GAME_CROSS then
+		begin
+			p := CROSS;
+			inc(game.winX);
+		end
+		else
+		begin
+			p := NOUGHT;
+			inc(game.winO);
+		end;
+		if (GAME_CONFIG.mode = PVA) and (p = COMPUTER) then
+			snd_play(SFX_DIE)
+		else	snd_play(SFX_WIN);
+		if GAME_CONFIG.mode = PVP then
+			who := PLAYER_SYMBOL[p] + ' WINS!'
+		else if p = HUMAN then
+			who := 'YOU WIN!'
+		else	who := 'THE CPU WINS!';
+		gameStatus(who + ' ENTER: NEXT GAME', 14);
+		gameRow(p, c1, r1, c2, r2);
+		for i := 1 to PIECE_STEPS do
+		begin
+			winLine(c1, r1, c2, r2, i);
+			lores_flip;
+			sleep(PIECE_TIME);
+		end;
+	end;
+	gameOver := wait([#13, #27, #32]) = #27;
 end;
 
 procedure	gamePlay;
@@ -271,117 +306,81 @@ var	quit	: boolean;
 	state	: GAME_STATE;
 	cell	: TILE_TYPE;
 begin
-	gameReset;
-
-        BLOCK_CROSS := @ICON_CROSS;
-        if GAME_CONFIG.isHeart then
-	        BLOCK_NOUGHT := @ICON_HEART
-        else	BLOCK_NOUGHT := @ICON_NOUGHT;
-
-	labelShow(notif);
+	if not lores_init then
+	begin
+		info(SHADE_RED, 'THE GAME NEEDS AN EGA OR VGA CARD.');
+		exit;
+	end;
+	boardClear(game.board);
+	game.player := HUMAN;
 	quit	:= FALSE;
 	c	:= 2;
 	r	:= 2;
-	state	:= GAME_PLAYING;
+	status	:= '';
 
 	while not quit do
 	begin
-                vsync;
-
-		gameStatus(FALSE);
-
-		if state = GAME_PLAYING then
+		state := gameState;
+		if state <> GAME_PLAYING then
 		begin
-                	cell := boardGet(game.board, c, r);
-                        if cell = NULL then
-                        	labelSetText(notif, 'READY')
-                        else	labelSetText(notif, 'CELL ['+gamePlayerSymbol(COLOR_TYPE(cell))+'~07]');
+			quit := gameOver(state);
+			boardClear(game.board);
+			game.player := HUMAN;
+			c := 2;
+			r := 2;
+			continue;
+		end;
 
-			boardJump(game.board, c, r, TRUE);
-			key := getkey_single;
-			boardJump(game.board, c, r, FALSE);
+		curC := c;
+		curR := r;
+		cell := boardGet(game.board, c, r);
+		if GAME_CONFIG.mode = PVA then
+			gameStatus('YOUR TURN', 7)
+		else	gameStatus(PLAYER_SYMBOL[game.player] + ' TO PLAY', 7);
 
-			case key of
-            KEY_QUESTION:	gameAbout;
-            KEY_H:			gameHelp;
-			KEY_LEFT,
-			KEY_A:	if c > 1 then dec(c) else c := 3;
-			KEY_RIGHT,
-			KEY_D:	if c < 3 then inc(c) else c := 1;
-			KEY_UP,
-			KEY_W:	if r > 1 then dec(r) else r := 3;
-			KEY_DOWN,
-			KEY_S:	if r < 3 then inc(r) else r := 1;
-                        KEY_ENTER,
-			KEY_SPACE:
-				if cell = NULL then	{ dont overwrite previous moves }
-				begin
-                    gameMoveHuman(c, r);
-                    snd_play(SFX_CLICK);
-                    gameStatus(FALSE);
-					boardDraw(game.board);
-					state := gameState;
-					if (state = GAME_PLAYING) then
-					begin
-						if (GAME_CONFIG.mode = PVA) then
-						begin
-							labelSetText(notif, '~03THINKING');
-							gameMoveComputer;
-							snd_play(SFX_BLIP);
-							sleep(320);
-							boardDraw(game.board);
-							state := gameState;
-						end
-						else
-					end;
-				end
-				else
-				begin
-					labelSetText(notif, '~04INVALID MOVE');
-					snd_play(SFX_ERROR);
-					sleep(320);
-				end;
-			KEY_ESC:
-				quit := gameAbort;
-			end;
-		end
-		else
-		begin
-			case state of
-			GAME_CROSS:
-				begin
-					labelSetText(notif, '  PLAYER '+gamePlayerSymbol(COMPUTER)+' ~07WINS!  ');
-					counterIncrease(game.cWinX);
-					if GAME_CONFIG.mode = PVA then
-						snd_play(SFX_DIE)
-					else	snd_play(SFX_WIN);
-					wait([#13,#27,#32]);
-				end;
-			GAME_NOUGHT:
-				begin
-					labelSetText(notif, '  PLAYER '+gamePlayerSymbol(HUMAN)+' ~07WINS!  ');
-					counterIncrease(game.cWinO);
-					snd_play(SFX_WIN);
-					wait([#13,#27,#32]);
-				end;
-			GAME_DRAW:	begin
-					labelSetText(notif, '  IT''S A ~0ETIE~07!  ');
-					counterIncrease(game.cDraw);
-					snd_play(SFX_FALL);
-					wait([#13,#27,#32]);
-				end;
-			end;
-
-			if not quit then
+		key := getkey_single;
+		case key of
+		KEY_LEFT,
+		KEY_A:	if c > 1 then dec(c) else c := 3;
+		KEY_RIGHT,
+		KEY_D:	if c < 3 then inc(c) else c := 1;
+		KEY_UP,
+		KEY_W:	if r > 1 then dec(r) else r := 3;
+		KEY_DOWN,
+		KEY_S:	if r < 3 then inc(r) else r := 1;
+		KEY_ENTER,
+		KEY_SPACE:
+			if cell = NULL then	{ dont overwrite previous moves }
 			begin
-				gameReset;
-				r := 2;
-				c := 2;
-				state := GAME_PLAYING;
+				snd_play(SFX_CLICK);
+				gameMoveHuman(c, r);
+				if (gameState = GAME_PLAYING) and (GAME_CONFIG.mode = PVA) then
+				begin
+					gameStatus('THINKING...', 13);
+					sleep(320);
+					gameMoveComputer;
+					snd_play(SFX_BLIP);
+				end;
+			end
+			else
+			begin
+				gameStatus('THAT SQUARE IS TAKEN', 12);
+				snd_play(SFX_ERROR);
+				sleep(400);
 			end;
+		KEY_H,
+		KEY_QUESTION:
+			begin
+				lores_suspend;
+				gameBackground;
+				if key = KEY_H then gameHelp else gameAbout;
+				lores_resume;
+			end;
+		KEY_ESC:
+			quit := lores_ask('QUIT THIS GAME? Y/N', 'YN'#27) = 'Y';
 		end;
 	end;
-	labelHide(notif);
+	lores_done;
 	clear($0F);
 end;
 

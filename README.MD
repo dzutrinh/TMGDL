@@ -490,9 +490,9 @@ Folder: [`GAMES/TETRIS`](./GAMES/TETRIS)
 
 ### Tic-Tac-Toe
 
-Noughts and crosses on a 3 x 3 board, against a friend or the computer at three levels (the hard one searches every move with minimax). Choose the colours of the players, or hearts instead of noughts.
+Noughts and crosses on a 3 x 3 board, against a friend or the computer at three levels (the hard one searches every move with minimax). Choose the colours of the players, or hearts instead of noughts. The board is drawn in the 160 x 100 mode: crosses are drawn stroke by stroke, noughts and hearts round the clock, and a line is struck through three in a row.
 
-Keys: `W` `A` `S` `D` move, `SPACE` play, `H` help, `ESC` quit.
+Keys: arrows or `W` `A` `S` `D` move, `SPACE` play, `H` help, `?` about, `ESC` quit.
 
 Folder: [`GAMES/T3`](./GAMES/T3)
 
@@ -650,8 +650,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Gomoku, Invaders, Lander, Reversi, Runner, Snake, Sokoban
-  and Tetris play in it.
+  Life (100 x 100 cells), Gomoku, Invaders, Lander, Reversi, Runner, Snake,
+  Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
