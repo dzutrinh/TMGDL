@@ -131,7 +131,9 @@ as source only: run `BUILD` in their folders.
 A two-panel file manager for package files: pack and unpack files (or add to
 and delete from an existing package), verify checksums, view package
 information, copy, move and rename files, and build self-extracting
-executables. Press F1 for the key list.
+executables. **CREATE INSTALLER PACKAGE** (`CTRL-I`) packs the marked files
+and writes `INSTALL.DAT` for the installer, with the exact package size. Press
+F1 for the key list.
 
 ![](./TOOLS/PCKMGR/SCREEN01.GIF)
 
@@ -155,7 +157,8 @@ Installs the files of a package into a chosen drive and folder, after checking
 the package size and the free disk space; PACKAGE VERIFICATION checks the
 package checksum on request. `INSTALL.DAT` holds
 the package name, description, default drive and folder, needed space
-(`SPACE`), and the package file and its exact size (`SIZE`).
+(`SPACE`), and the package file and its exact size (`SIZE`). PM creates both
+files (`CTRL-I`).
 
 ![](./TOOLS/INSTALL/SCREEN01.GIF)
 
