@@ -427,7 +427,7 @@ Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
 
 ### Snake
 
-Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board. The field is 56 x 46 cells of half-block pixels, four times as many as a text grid would hold.
+Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board. The field is 56 x 46 cells of 2 x 2 pixels in the [160 x 100 mode](#low-res-160-x-100-mode), four times as many as a text grid would hold, with the scores on a panel at the right.
 
 Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
 
