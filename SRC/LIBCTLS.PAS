@@ -21,7 +21,7 @@
 {   . Menu pop-up       | . Menu pull-down     | . Help box                  }
 {   . Progress bar      | . Input box          | . Drive picker              }
 {   . List view/picker  | . Scroll bar         | . Log view                  }
-{   . ASCII char map    | . Form (fields)                                    }
+{   . ASCII char map    | . Form (fields)      | . High-score table          }
 {                                                                            }
 { ////////////////////////////////////////////////////////////////////////// }
 
@@ -366,6 +366,43 @@ function	logviewCreate(x, y, w, h, attr: integer): PLOGVIEW;
 procedure	logviewDestroy(var log: PLOGVIEW);
 procedure	logviewDraw(const log: PLOGVIEW);
 procedure	logviewAdd(var log: PLOGVIEW; text: STR80);
+
+{ ///////////////////////////// HIGH-SCORE API /////////////////////////// }
+
+{ a table of the best results of a game, kept in a file of its own:        }
+{ points (the most is best) or times in seconds (the least is best), each  }
+{ with the player's name and a line of information (level, depth...)       }
+
+const	HISCORE_MAX	= 10;
+	HS_POINTS	= 0;
+	HS_TIME		= 1;
+
+type	HISCORE_ENTRY	= record
+		name	: string[12];
+		score	: longint;		{ 0: an empty entry              }
+		info	: string[40];
+	end;
+
+	HISCORE_TABLE	= record
+		size	: byte;			{ entries used: 1..HISCORE_MAX   }
+		kind	: byte;			{ HS_POINTS or HS_TIME           }
+		last	: string[12];		{ the name typed last            }
+		entries	: array[1..HISCORE_MAX] of HISCORE_ENTRY;
+	end;
+
+procedure	hiscoreInit  (var t: HISCORE_TABLE; size: integer; kind: byte);
+procedure	hiscoreFill  (var t: HISCORE_TABLE; names: string; best, step: longint);
+function	hiscoreValid (const t: HISCORE_TABLE): boolean;
+function	hiscoreLoad  (filename: string; var t: HISCORE_TABLE): boolean;
+function	hiscoreSave  (filename: string; const t: HISCORE_TABLE): boolean;
+function	hiscoreRank  (const t: HISCORE_TABLE; score: longint): integer;
+function	hiscoreBest  (const t: HISCORE_TABLE): longint;
+function	hiscoreText  (const t: HISCORE_TABLE; score: longint): string;
+procedure	hiscoreInsert(var t: HISCORE_TABLE; rank: integer; name: string; score: longint; info: string);
+procedure	hiscoreDraw  (const t: HISCORE_TABLE; x, y, namew: integer; showInfo: boolean; mark: integer);
+procedure	hiscoreView  (const t: HISCORE_TABLE; title: string; shade: SHADING; mark: integer);
+function	hiscoreEnter (var t: HISCORE_TABLE; score: longint; info, title: string;
+			      shade: SHADING): integer;
 
 { ///////////////////////////////// FORM API /////////////////////////////// }
 
@@ -2256,6 +2293,198 @@ begin
                 log^.log[log^.h-1] := text;
         end;
 	logviewDraw(log);
+end;
+
+{ ///////////////////////////// HIGH-SCORE API /////////////////////////// }
+
+procedure	hiscoreInit(var t: HISCORE_TABLE; size: integer; kind: byte);
+begin
+	fillchar(t, sizeof(HISCORE_TABLE), 0);
+	if size < 1 then size := 1;
+	if size > HISCORE_MAX then size := HISCORE_MAX;
+	t.size := size;
+	t.kind := kind;
+end;
+
+{ entries to start with: names between '|', scores from best, step apart }
+procedure	hiscoreFill(var t: HISCORE_TABLE; names: string; best, step: longint);
+var	i	: integer;
+begin
+	for i := 1 to t.size do
+	begin
+		if names = '' then exit;
+		t.entries[i].name  := toupper(tokenize(names, '|'));
+		t.entries[i].score := best;
+		t.entries[i].info  := '';
+		if t.kind = HS_TIME then inc(best, step) else dec(best, step);
+		if best < 1 then best := 1;
+	end;
+end;
+
+{ a table read from a file is used only if it makes sense }
+function	hiscoreValid(const t: HISCORE_TABLE): boolean;
+var	i	: integer;
+begin
+	hiscoreValid := FALSE;
+	if (t.size < 1) or (t.size > HISCORE_MAX) or (t.kind > HS_TIME) then exit;
+	for i := 1 to t.size do
+		if t.entries[i].score < 0 then exit;
+	hiscoreValid := TRUE;
+end;
+
+{ a table kept in a file of its own, like TETRIS.HI; FALSE when there is }
+{ none yet or it is damaged (the table is then left as it was)           }
+function	hiscoreLoad(filename: string; var t: HISCORE_TABLE): boolean;
+var	tmp	: HISCORE_TABLE;
+begin
+	hiscoreLoad := FALSE;
+	if not config_load(filename, tmp, sizeof(HISCORE_TABLE)) then exit;
+	if not hiscoreValid(tmp) then exit;
+	t := tmp;
+	hiscoreLoad := TRUE;
+end;
+
+function	hiscoreSave(filename: string; const t: HISCORE_TABLE): boolean;
+var	tmp	: HISCORE_TABLE;
+begin
+	tmp := t;
+	hiscoreSave := config_save(filename, tmp, sizeof(HISCORE_TABLE));
+end;
+
+{ is a score better than an entry (an empty one is beaten by anything)? }
+function	hiscoreBeats(const t: HISCORE_TABLE; score: longint; i: integer): boolean;
+begin
+	if t.entries[i].score = 0 then
+		hiscoreBeats := TRUE
+	else if t.kind = HS_TIME then
+		hiscoreBeats := score < t.entries[i].score
+	else	hiscoreBeats := score > t.entries[i].score;
+end;
+
+{ the place a score earns in the table, 0 if none }
+function	hiscoreRank(const t: HISCORE_TABLE; score: longint): integer;
+var	i	: integer;
+begin
+	hiscoreRank := 0;
+	if score <= 0 then exit;
+	for i := 1 to t.size do
+		if hiscoreBeats(t, score, i) then
+		begin
+			hiscoreRank := i;
+			exit;
+		end;
+end;
+
+function	hiscoreBest(const t: HISCORE_TABLE): longint;
+begin
+	hiscoreBest := t.entries[1].score;
+end;
+
+function	hiscoreText(const t: HISCORE_TABLE; score: longint): string;
+begin
+	if score = 0 then
+		hiscoreText := '-'
+	else if t.kind = HS_TIME then
+		hiscoreText := ltoa(score div 60) + ':' + chr(ord('0') + score mod 60 div 10) + chr(ord('0') + score mod 10)
+	else	hiscoreText := ltoa(score);
+end;
+
+procedure	hiscoreInsert(var t: HISCORE_TABLE; rank: integer; name: string; score: longint; info: string);
+var	i	: integer;
+begin
+	if (rank < 1) or (rank > t.size) then exit;
+	for i := t.size downto rank + 1 do t.entries[i] := t.entries[i - 1];
+	t.entries[rank].name  := toupper(name);
+	t.entries[rank].score := score;
+	t.entries[rank].info  := info;
+end;
+
+{ one entry a row, from row y: rank, name, score and the information; }
+{ the entry at 'mark' stands out                                     }
+procedure	hiscoreDraw(const t: HISCORE_TABLE; x, y, namew: integer; showInfo: boolean; mark: integer);
+var	i	: integer;
+	a, b	: STR_ATTR;
+	row	: string;
+begin
+	for i := 1 to t.size do
+		with t.entries[i] do
+		begin
+			if i = mark then begin a := '~0A'; b := '~0A'; end else begin a := '~0E'; b := '~0F'; end;
+			row := '~06' + lpad(itoa(i), 2) + ' ' + a + rpad(copy(name, 1, namew), namew) + ' ' +
+			       b + lpad(hiscoreText(t, score), 8);
+			if showInfo then row := row + '  ~07' + info;
+			print(x, y + i - 1, row);
+		end;
+end;
+
+{ the widest information of the table }
+function	hiscoreInfoWidth(const t: HISCORE_TABLE): integer;
+var	i, w	: integer;
+begin
+	w := 0;
+	for i := 1 to t.size do
+		if length(t.entries[i].info) > w then w := length(t.entries[i].info);
+	hiscoreInfoWidth := w;
+end;
+
+procedure	hiscoreBox(const t: HISCORE_TABLE; title: string; shade: SHADING; extra: integer;
+			   var dlg: PDIALOG; var x, y: integer);
+var	w, h	: integer;
+begin
+	w := 2 + 1 + 12 + 1 + 8 + 6;
+	if hiscoreInfoWidth(t) + extra > 0 then inc(w, 2 + ltx_max(hiscoreInfoWidth(t), extra));
+	if w < text_length(title) + 8 then w := text_length(title) + 8;
+	h := t.size + 4;
+	x := -1;
+	y := -1;
+	ltx_validate_rect(x, y, w, h);
+	dlg := dialog_open(x, y, w, h, shade, '~08[ ~0F' + title + ' ~08]', '');
+end;
+
+{ the table in a box; the entry at 'mark' (if not 0) stands out }
+procedure	hiscoreView(const t: HISCORE_TABLE; title: string; shade: SHADING; mark: integer);
+var	dlg	: PDIALOG;
+	x, y	: integer;
+	oldscr	: SCREEN;
+begin
+	oldscr := vscreen_activate(vscreen_vram);
+	hiscoreBox(t, title, shade, 0, dlg, x, y);
+	hiscoreDraw(t, x + 3, y + 2, 12, hiscoreInfoWidth(t) > 0, mark);
+	wait([#27, #13, #32]);
+	dialog_close(dlg);
+	vscreen_activate(oldscr);
+end;
+
+{ a score good enough goes in the table: the player types a name in its }
+{ row (the last name typed is offered); returns the rank, or 0          }
+function	hiscoreEnter(var t: HISCORE_TABLE; score: longint; info, title: string;
+			     shade: SHADING): integer;
+var	dlg	: PDIALOG;
+	x, y,
+	rank	: integer;
+	oldscr	: SCREEN;
+	typed	: string;
+begin
+	hiscoreEnter := 0;
+	rank := hiscoreRank(t, score);
+	if rank = 0 then exit;
+	hiscoreInsert(t, rank, '', score, info);
+
+	oldscr := vscreen_activate(vscreen_vram);
+	flushkeys;
+	hiscoreBox(t, title, shade, length(info), dlg, x, y);
+	hiscoreDraw(t, x + 3, y + 2, 12, hiscoreInfoWidth(t) > 0, rank);
+	print(x + 3, y + t.size + 2, '~07TYPE YOUR NAME, THEN ~0FENTER');
+	typed := t.last;
+	if input(x + 6, y + 1 + rank, 12, $2F, typed) and (typed <> '') then
+	begin
+		t.entries[rank].name := toupper(typed);
+		t.last := toupper(typed);
+	end
+	else	t.entries[rank].name := '???';
+	dialog_close(dlg);
+	vscreen_activate(oldscr);
+	hiscoreEnter := rank;
 end;
 
 { ///////////////////////////////// FORM API /////////////////////////////// }

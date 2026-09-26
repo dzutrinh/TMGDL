@@ -6,7 +6,7 @@ unit libtmgd;
 
 interface
 
-uses	libtext, libctls, libpack, libutil;
+uses	libtext, libctls, libpack, libutil, libsnd;
 
 const
 	LIBTMGD_VERSION	= $0105;	{ TMGDL library version, all units }

@@ -12,6 +12,7 @@ UNITS=libtext.pas \
 	libutil.pas \
 	libctls.pas \
 	libpack.pas \
+	libsnd.pas \
 	preps.inc
 
 all: $(SOURCE) $(UNITS)

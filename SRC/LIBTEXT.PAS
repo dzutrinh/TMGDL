@@ -329,6 +329,12 @@ procedure	vsync_sleep(n: longint);
 procedure	sleep(duration: longint);	{ milliseconds }
 procedure	ltx_idle;
 
+{ a procedure called whenever the program waits: in ltx_idle, sleep and }
+{ while readkey waits for a key (LIBSND keeps its music going with it)  }
+type	LTX_HOOK	= procedure;
+
+procedure	ltx_idle_hook(hook: LTX_HOOK);
+
 { ////////////////////////////// KEYBOARD API ////////////////////////////// }
 
 function	readkey: char;
@@ -392,6 +398,25 @@ function	block_attach       (buffer: pointer): PBLOCK;
 procedure	block_mapper       (blk: PBLOCK; buf: pchar; c: char);
 function	block_save         (blk: PBLOCK; filename: string): boolean;
 function	block_load         (filename: string): PBLOCK;
+
+{ ////////////////////////// HALF-BLOCK PIXELS API ////////////////////////// }
+
+{ Every character cell shows two square pixels, one above the other, with }
+{ the half-block characters: an 80 x 50 canvas in 16 colors, drawn on the  }
+{ current screen (virtual screens work too). Pixels of colors 8 to 15      }
+{ over each other in one cell need blink(BLINK_OFF)                        }
+
+const	PIXEL_W		= SCR_WIDTH;		{ 80 pixels across  }
+	PIXEL_H		= SCR_HEIGHT * 2;	{ 50 pixels down    }
+
+procedure	pixel_set   (x, y: integer; color: byte);
+function	pixel_get   (x, y: integer): byte;
+procedure	pixel_clear (color: byte);
+procedure	pixel_line  (x0, y0, x1, y1: integer; color: byte);
+procedure	pixel_rect  (x, y, w, h: integer; color: byte);
+procedure	pixel_bar   (x, y, w, h: integer; color: byte);
+procedure	pixel_circle(cx, cy, r: integer; color: byte);
+procedure	pixel_disc  (cx, cy, r: integer; color: byte);
 
 { //////////////////////////// DIALOG BOX API ////////////////////////////// }
 
@@ -766,9 +791,24 @@ begin
 end;
 
 { give the CPU back to DOS/multitaskers while busy-waiting }
-procedure	ltx_idle; assembler;
+const	IDLE_HOOKED	: boolean = FALSE;
+var	IDLE_HOOK	: LTX_HOOK;
+
+procedure	ltx_idle_hook(hook: LTX_HOOK);
+begin
+	IDLE_HOOK   := hook;
+	IDLE_HOOKED := TRUE;
+end;
+
+procedure	dos_idle; assembler;
 asm
 	int	$28
+end;
+
+procedure	ltx_idle;
+begin
+	dos_idle;
+	if IDLE_HOOKED then IDLE_HOOK;
 end;
 
 { determine the offset of (x, y) inside a screen buffer, (1-80,1-25) }
@@ -1109,17 +1149,29 @@ begin
 end;
 
 { read a character }
-function	readkey: char; assembler;
+function	dos_readkey: char; assembler;
 asm
 	mov  ah, $07
 	int  $21
 end;
 
-{ wait until a key is hit, the character is not removed from the buffer }
-function	keypressed: boolean; assembler;
+function	dos_kbhit: byte; assembler;
 asm
 	mov  ah, $0B
 	int  $21
+end;
+
+{ is a key waiting? the character is not removed from the buffer }
+function	keypressed: boolean;
+begin
+	keypressed := dos_kbhit <> 0;
+end;
+
+{ read a character; the idle hook runs while waiting for it }
+function	readkey: char;
+begin
+	while not keypressed do ltx_idle;
+	readkey := dos_readkey;
 end;
 
 { read extended keyboard scancode }
@@ -1529,6 +1581,135 @@ end;
 procedure       center(y: longint; text: string);
 begin
 	print(ltx_centerx(text_length(text)), y, text);
+end;
+
+{ ////////////////////////// HALF-BLOCK PIXELS ///////////////////////////// }
+
+{ the colors of the upper and lower pixel of a cell }
+procedure	pixel_cell(cx, cy: integer; var top, bot: byte);
+var	w	: word;
+	a	: byte;
+begin
+	w := ltx_getw(cx, cy);
+	a := hi(w);
+	case chr(lo(w)) of
+	#223:	begin top := a and $0F; bot := a shr 4;   end;	{ upper half }
+	#220:	begin top := a shr 4;   bot := a and $0F; end;	{ lower half }
+	#219:	begin top := a and $0F; bot := a and $0F; end;	{ full block }
+	else	begin top := a shr 4;   bot := a shr 4;   end;	{ background }
+	end;
+end;
+
+{ write a cell, avoiding bright backgrounds when a character can do it }
+procedure	pixel_put(cx, cy: integer; top, bot: byte);
+begin
+	if top = bot then
+		ltx_setw(cx, cy, ltx_makew(#219, top))
+	else if bot < 8 then
+		ltx_setw(cx, cy, ltx_makew(#223, bot shl 4 + top))
+	else if top < 8 then
+		ltx_setw(cx, cy, ltx_makew(#220, top shl 4 + bot))
+	else	ltx_setw(cx, cy, ltx_makew(#223, bot shl 4 + top));
+end;
+
+procedure	pixel_set(x, y: integer; color: byte);
+var	top, bot: byte;
+begin
+	if (x < 0) or (x >= PIXEL_W) or (y < 0) or (y >= PIXEL_H) then exit;
+	pixel_cell(x + 1, y shr 1 + 1, top, bot);
+	if odd(y) then bot := color and $0F else top := color and $0F;
+	pixel_put(x + 1, y shr 1 + 1, top, bot);
+end;
+
+function	pixel_get(x, y: integer): byte;
+var	top, bot: byte;
+begin
+	pixel_get := 0;
+	if (x < 0) or (x >= PIXEL_W) or (y < 0) or (y >= PIXEL_H) then exit;
+	pixel_cell(x + 1, y shr 1 + 1, top, bot);
+	if odd(y) then pixel_get := bot else pixel_get := top;
+end;
+
+procedure	pixel_clear(color: byte);
+begin
+	ltx_fillw(1, 1, SCR_WIDTH, SCR_HEIGHT, ltx_makew(#219, color and $0F));
+end;
+
+procedure	pixel_line(x0, y0, x1, y1: integer; color: byte);
+var	dx, dy,
+	sx, sy,
+	err, e2	: integer;
+begin
+	dx := abs(x1 - x0);
+	dy := -abs(y1 - y0);
+	if x0 < x1 then sx := 1 else sx := -1;
+	if y0 < y1 then sy := 1 else sy := -1;
+	err := dx + dy;
+	repeat
+		pixel_set(x0, y0, color);
+		if (x0 = x1) and (y0 = y1) then break;
+		e2 := 2 * err;
+		if e2 >= dy then
+		begin
+			inc(err, dy);
+			inc(x0, sx);
+		end;
+		if e2 <= dx then
+		begin
+			inc(err, dx);
+			inc(y0, sy);
+		end;
+	until FALSE;
+end;
+
+procedure	pixel_rect(x, y, w, h: integer; color: byte);
+begin
+	if (w < 1) or (h < 1) then exit;
+	pixel_line(x, y, x + w - 1, y, color);
+	pixel_line(x, y + h - 1, x + w - 1, y + h - 1, color);
+	pixel_line(x, y, x, y + h - 1, color);
+	pixel_line(x + w - 1, y, x + w - 1, y + h - 1, color);
+end;
+
+procedure	pixel_bar(x, y, w, h: integer; color: byte);
+var	i, j	: integer;
+begin
+	for j := y to y + h - 1 do
+		for i := x to x + w - 1 do pixel_set(i, j, color);
+end;
+
+{ the points of a circle, eight at a time (midpoint algorithm) }
+procedure	pixel_circle(cx, cy, r: integer; color: byte);
+var	x, y,
+	d	: integer;
+begin
+	if r < 0 then exit;
+	x := r;
+	y := 0;
+	d := 1 - r;
+	while x >= y do
+	begin
+		pixel_set(cx + x, cy + y, color);	pixel_set(cx - x, cy + y, color);
+		pixel_set(cx + x, cy - y, color);	pixel_set(cx - x, cy - y, color);
+		pixel_set(cx + y, cy + x, color);	pixel_set(cx - y, cy + x, color);
+		pixel_set(cx + y, cy - x, color);	pixel_set(cx - y, cy - x, color);
+		inc(y);
+		if d < 0 then
+			inc(d, 2 * y + 1)
+		else
+		begin
+			dec(x);
+			inc(d, 2 * (y - x) + 1);
+		end;
+	end;
+end;
+
+procedure	pixel_disc(cx, cy, r: integer; color: byte);
+var	x, y	: integer;
+begin
+	for y := -r to r do
+		for x := -r to r do
+			if x * x + y * y <= r * r + r then pixel_set(cx + x, cy + y, color);
 end;
 
 function	dialog_create(x, y, w, h: integer; shade: SHADING;
