@@ -22,8 +22,12 @@ Supported compilers:
 | [Chomp](#chomp) | 1.0 | Maze game: eat the dots, avoid four ghosts |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
+| [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
+| [Reversi](#reversi) | 1.0 | Othello-style disc flipping against a friend or the computer |
+| [Runner](#runner) | 1.0 | Lode Runner-style platforms: dig, climb and grab the gold |
 | [Snake](#snake) | 1.0 | Eat apples, grow longer, dodge the obstacles |
 | [Sokoban](#sokoban) | 1.0 | Push the crates onto the goals, 12 levels |
+| [Solitaire](#solitaire) | 1.0 | Klondike patience, drawing one or three cards |
 | [Tetris](#tetris) | 1.1 | The falling-blocks classic |
 | [Tic-Tac-Toe](#tic-tac-toe) | 1.2 | Noughts and crosses against a friend or the computer |
 
@@ -199,6 +203,42 @@ Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
 
 ![](./GAMES/GOMOKU/SCREEN02.GIF)
 
+### Minesweeper
+
+Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The best time of each level is kept.
+
+Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` open, `F` flag, `N` new game, `H` help, `?` about, `ESC` quit.
+
+Folder: [`GAMES/MINES`](./GAMES/MINES)
+
+![](./GAMES/MINES/SCREEN01.GIF)
+
+![](./GAMES/MINES/SCREEN02.GIF)
+
+### Reversi
+
+Reversi (Othello) on a green 8 x 8 board: enclose the other player's discs to turn them over, and have the most discs when neither side can move. Two players, or one against the computer: easy, medium, or hard, which searches several moves ahead and plays the last eight perfectly. Legal moves can be shown, turned discs flip on screen, and moves can be taken back.
+
+Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `M` show moves, `H` help, `?` about, `ESC` quit.
+
+Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
+
+![](./GAMES/REVERSI/SCREEN01.GIF)
+
+![](./GAMES/REVERSI/SCREEN02.GIF)
+
+### Runner
+
+A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else.
+
+Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
+
+Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
+
+![](./GAMES/RUNNER/SCREEN01.GIF)
+
+![](./GAMES/RUNNER/SCREEN02.GIF)
+
 ### Snake
 
 Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, and an option to go through the edges.
@@ -222,6 +262,18 @@ Folder: [`GAMES/SOKOBAN`](./GAMES/SOKOBAN)
 ![](./GAMES/SOKOBAN/SCREEN01.GIF)
 
 ![](./GAMES/SOKOBAN/SCREEN02.GIF)
+
+### Solitaire
+
+Klondike patience with 7 x 4 text-mode cards: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
+
+Keys: arrows move, `UP` in a pile takes more cards, `SPACE` pick up/put down, `ENTER` best place, `D` draw, `A` all possible cards up, `U` undo, `N` new deal, `H` help, `ESC` menu.
+
+Folder: [`GAMES/SOLITAIR`](./GAMES/SOLITAIR)
+
+![](./GAMES/SOLITAIR/SCREEN01.GIF)
+
+![](./GAMES/SOLITAIR/SCREEN02.GIF)
 
 ### Tetris
 
@@ -358,6 +410,10 @@ Folder: [`TOOLS`](./TOOLS)
   executables, safe extraction paths, full I/O error checking.
 - Counters hold 32-bit values; many nil-pointer, I/O and off-by-one fixes.
 - Free Pascal builds work: register usage in the assembler routines was fixed.
+- A form control in `LIBCTLS`: dialogs of typed fields (text, numbers, file
+  names, paths, drives, choices, switches, passwords) checked as they are left.
+- Nine new games: Arkanoid, Chomp, Gomoku, Minesweeper, Reversi, Runner, Snake,
+  Sokoban and Solitaire.
 
 ## Known issues
 
