@@ -26,20 +26,6 @@ Supported compilers:
 Every game plays sound effects on the PC speaker; they can be turned off in
 its menu (in 2048, with `M`).
 
-## Tools
-
-| Tool | Version | What it is |
-| --- | --- | --- |
-| [PM](#pm-package-manager) | 1.1 | Full-screen package manager, creates installer packages |
-| [PCK](#pck-command-line-packer) | 1.1 | Command-line package tool |
-| [SFX](#sfx-self-extractor) | 1.1 | Self-extractor stub for packages |
-| [INSTALL](#install-installer) | 1.1 | Installs a package with the settings of `INSTALL.DAT` |
-| [ASCII](#ascii-character-map) | - | Character map of the text-mode font |
-| [SCANCODE](#scancode-key-code-viewer) | - | Shows the codes of the keys pressed |
-| [VIEWBIN](#viewbin-screen-dump-viewer) | - | Shows a screen dump saved with F12 |
-| [DEMO](#demo-pixels-and-sound) | - | Half-block pixel scenes with PC-speaker music |
-| [MUSICBOX](#musicbox-tune-editor) | 1.0 | Play, write and save tunes for `snd_play` |
-
 ## Library
 
 | Unit | Contents |
@@ -94,9 +80,6 @@ if formExec(f) then
   writeln(formText(f, 1), formNumber(f, 2), formChoice(f, 3), formSwitch(f, 4));
 formDestroy(f);
 ```
-
-PM's *Create installer package* dialog and the installer's destination dialog
-are built with it.
 
 ### Half-block pixels
 
@@ -174,8 +157,6 @@ Ready-made effects: `SFX_CLICK`, `SFX_BLIP`, `SFX_COIN`, `SFX_HIT`,
 `SFX_JUMP`, `SFX_FALL`, `SFX_BOOM`, `SFX_DIE`, `SFX_LEVEL`, `SFX_WIN` and
 `SFX_ERROR`. `SND_ENABLED := FALSE` turns all sound off (the games keep it as
 an option), and the speaker is always silenced when the program ends.
-[MUSICBOX](#musicbox-tune-editor) writes tunes and saves them as Pascal
-constants ready for `snd_play`.
 
 ```pascal
 uses libtext, libsnd;
@@ -215,14 +196,14 @@ Every game with a leader board uses it: 2048 and Tetris.
 Build settings live in `SRC/MACROS`, shared by every makefile:
 
 - `LIBROOT`/`LIBDIR`: where the compiled units are installed (default `\TMGDL\TEXTMODE\LIB`)
-- `BINDIR`: where `make install` copies the games and tools (default `\TMGDL\TEXTMODE\BIN`)
+- `BINDIR`: where `make install` copies the games (default `\TMGDL\TEXTMODE\BIN`)
 - `TMTROOT`, `TP7ROOT`, `FPCROOT`: compiler locations
 - `RM`, `CP`, `MV`, `MD`: file commands used by the makefiles
 
 Every makefile works with the three compilers: TMT Pascal by default, or
 Borland Pascal / Free Pascal with `make -DUSE_BPC` / `make -DUSE_FPC`. Each
 folder also has a `BUILD.BAT` that takes the compiler as its argument, cleans
-and rebuilds. Build and install the library first, then any game or tool,
+and rebuilds. Build and install the library first, then any game,
 with the same compiler:
 
 ```
@@ -236,8 +217,7 @@ BUILD FPC        (or: make -DUSE_FPC)
 make -DUSE_FPC install
 ```
 
-Every game folder under `GAMES` has a makefile, as do `TOOLS` (ASCII, SCANCODE, VIEWBIN, DEMO),
-`TOOLS\PCKMGR` (PM, PCK, SFX), `TOOLS\INSTALL` and `TOOLS\MUSICBOX`. Programs built with Free
+Every game folder under `GAMES` has a makefile. Programs built with Free
 Pascal need `CWSDPMI.EXE` (in `%FPCROOT%\BIN\GO32V2`) in the same folder or on
 the `PATH`.
 
@@ -246,10 +226,7 @@ the `PATH`.
 compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
-The executables stored in the 2048, Game of Life, Tetris and Tic-Tac-Toe
-folders come from earlier releases; rebuild them to get the versions listed
-here. The other games and the tools ship as source only: run `BUILD` in their
-folders.
+The games ship as source only: run `BUILD` in their folders.
 
 ## Games in detail
 
@@ -301,128 +278,6 @@ Folder: [`GAMES/T3`](./GAMES/T3)
 
 ![](./GAMES/T3/SCREEN02.GIF)
 
-## Tools in detail
-
-### PM (package manager)
-
-A two-panel file manager for package files: pack and unpack files (or add to
-and delete from an existing package), verify checksums, view package
-information, copy, move and rename files, and build self-extracting
-executables. **CREATE INSTALLER PACKAGE** (`CTRL-I`) packs the marked files
-and writes `INSTALL.DAT` for the installer, with the exact package size; its
-form is filled from an `INSTALL.DAT` already in the folder. Press `F1` for the
-key list.
-
-Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
-
-![](./TOOLS/PCKMGR/SCREEN01.GIF)
-
-![](./TOOLS/PCKMGR/SCREEN02.GIF)
-
-### PCK (command-line packer)
-
-Does what PM does, from the command line or a batch file:
-
-```
-PCK L GAMES.PCK                 list
-PCK T GAMES.PCK                 test the checksum
-PCK X GAMES.PCK C:\GAMES        extract
-PCK C GAMES.PCK *.EXE *.HLP     create (or @list.txt)
-PCK A GAMES.PCK README.TXT      add or replace files
-PCK D GAMES.PCK OLD.EXE         delete files
-PCK S GAMES.PCK SETUP           make SETUP.EXE, a self-extractor
-```
-
-Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
-
-### SFX (self-extractor)
-
-The stub that PM (`CTRL-E`) and PCK (`S`) put in front of a package to make a
-self-extracting executable. Keep `SFX.EXE` next to `PM.EXE` and `PCK.EXE`.
-The executable unpacks itself into the current folder, or into the folder
-given on its command line.
-
-Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
-
-### INSTALL (installer)
-
-Installs the files of a package into a chosen drive and folder, after checking
-the package size and the free disk space. The destination is entered in a
-form that checks right away that the drive is ready and has room for the
-package. PACKAGE VERIFICATION checks the
-package checksum on request. `INSTALL.DAT` holds the package name,
-description, license, default drive and folder, needed space (`SPACE`), and
-the package file and its exact size (`SIZE`). PM creates both files
-(`CTRL-I`); put `INSTALL.EXE` with them.
-
-```
-[INFO]
-PACKAGE   = Text-mode games collection
-DESC      = Version ~0F1.0
-LICENSE   = This is a ~03FREEWARE
-DISK      = C
-FOLDER    = TMG
-SPACE     = 1024000
-
-[FILE]
-PACKAGE   = INSTALL.PCK
-SIZE      = 683365
-```
-
-Folder: [`TOOLS/INSTALL`](./TOOLS/INSTALL)
-
-![](./TOOLS/INSTALL/SCREEN01.GIF)
-
-![](./TOOLS/INSTALL/SCREEN02.GIF)
-
-### ASCII (character map)
-
-Shows the 256 characters of the text-mode font; pick one to see its code in
-hexadecimal and decimal. Handy for drawing boxes and ANSI art.
-
-Folder: [`TOOLS`](./TOOLS)
-
-![](./TOOLS/ASCII.GIF)
-
-### SCANCODE (key code viewer)
-
-Shows the code `getkey` returns for every key pressed, with a short history,
-to find the `KEY_...` value of a key. `ESC` quits.
-
-Folder: [`TOOLS`](./TOOLS)
-
-![](./TOOLS/SCANCODE.GIF)
-
-### VIEWBIN (screen dump viewer)
-
-`VIEWBIN FILE.BIN` shows a screen dump (4000 bytes of characters and
-colours), like the ones the games save with `F12`.
-
-Folder: [`TOOLS`](./TOOLS)
-
-![](./TOOLS/VIEWBIN.GIF)
-
-### DEMO (pixels and sound)
-
-Shows what `LIBTEXT`'s half-block pixels and `LIBSND` can do: bouncing
-lines, balls, a plasma and rings drawn on an 80 x 50 pixel screen, on a
-virtual screen flipped every frame, while a tune plays on the PC speaker.
-`SPACE` goes to the next scene, `M` turns the music on or off, `ESC` quits.
-
-Folder: [`TOOLS`](./TOOLS)
-
-![](./TOOLS/DEMO.GIF)
-
-### MUSICBOX (tune editor)
-
-Plays the PC keyboard like a two-octave piano, as in a tracker (`Z` `S` `X` `D` `C`... and `Q` `2` `W` `3` `E`...), and records the notes into a tune: set lengths, dots and rests, change the pitch of a note, move around and delete. `ENTER` plays the tune with the notes lit on the piano. The tune is shown in the music language of `LIBSND`, and saved as `.MUS` text files (`MUSICBOX TUNE.MUS` opens one) or as a Pascal include file of string constants for `snd_play`, split in parts of 250 characters when it is long. Five example tunes, tempo and style (normal, legato, staccato).
-
-Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
-
-![](./TOOLS/MUSICBOX/SCREEN01.GIF)
-
-![](./TOOLS/MUSICBOX/SCREEN02.GIF)
-
 ## What's new in 1.5
 
 - Screen output is clipped to the screen, and dialogs, boxes and menus fit on
@@ -448,8 +303,6 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Game of Life (100 x 100 cells), Tetris, Tic-Tac-Toe and 2048 play in it.
-- DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
-  that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
   the BIOS buffer, so a held key no longer keeps acting after it is let go in
   programs that take a while over each key. The turn-based games use it.
