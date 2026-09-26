@@ -93,7 +93,8 @@ if formExec(f) then
 formDestroy(f);
 ```
 
-PM's *Create installer package* dialog is built with it.
+PM's *Create installer package* dialog and the installer's destination dialog
+are built with it.
 
 ## Building
 
@@ -292,7 +293,9 @@ Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
 ### INSTALL (installer)
 
 Installs the files of a package into a chosen drive and folder, after checking
-the package size and the free disk space; PACKAGE VERIFICATION checks the
+the package size and the free disk space. The destination is entered in a
+form that checks right away that the drive is ready and has room for the
+package. PACKAGE VERIFICATION checks the
 package checksum on request. `INSTALL.DAT` holds the package name,
 description, license, default drive and folder, needed space (`SPACE`), and
 the package file and its exact size (`SIZE`). PM creates both files
