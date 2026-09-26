@@ -18,7 +18,7 @@ Supported compilers:
 | Folder | Contents |
 | --- | --- |
 | `SRC` | The library: `LIBTEXT` (screen, keyboard, timer, dialogs), `LIBCTLS` (controls), `LIBUTIL` (files, folders, drives, config, CRC32), `LIBPACK` (packages), `LIBTMGD` (uses them all) |
-| `GAMES` | 2048, Arkanoid, Game of Life, Gomoku, Snake, Tic-Tac-Toe and Tetris |
+| `GAMES` | 2048, Arkanoid, Game of Life, Gomoku, Snake, Sokoban, Tic-Tac-Toe and Tetris |
 | `TOOLS/PCKMGR` | `PM` package manager, `PCK` command-line packer, `SFX` self-extractor stub |
 | `TOOLS/INSTALL` | Installer driven by `INSTALL.DAT` and a package file |
 | `TOOLS` | `ASCII` character map, `SCANCODE` key code viewer, `VIEWBIN` screen dump viewer |
@@ -50,7 +50,7 @@ make -DUSE_FPC install
 ```
 
 Makefiles with a game or tool: `GAMES\2048`, `GAMES\ARKANOID`, `GAMES\GOL`,
-`GAMES\GOMOKU`, `GAMES\SNAKE`, `GAMES\T3`, `GAMES\TETRIS`, `TOOLS` (ASCII, SCANCODE, VIEWBIN),
+`GAMES\GOMOKU`, `GAMES\SNAKE`, `GAMES\SOKOBAN`, `GAMES\T3`, `GAMES\TETRIS`, `TOOLS` (ASCII, SCANCODE, VIEWBIN),
 `TOOLS\PCKMGR` (PM, PCK, SFX) and `TOOLS\INSTALL`. Programs built with Free
 Pascal need `CWSDPMI.EXE` (in `%FPCROOT%\BIN\GO32V2`) in the same folder or on
 the `PATH`.
@@ -61,8 +61,8 @@ compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
 The executables stored in the game folders come from earlier releases; rebuild
-them to get the versions below. Arkanoid, Gomoku and Snake ship as source only:
-run `BUILD` in their folders.
+them to get the versions below. Arkanoid, Gomoku, Snake and Sokoban ship as
+source only: run `BUILD` in their folders.
 
 ## Games
 
@@ -73,6 +73,7 @@ run `BUILD` in their folders.
 | Game of Life | 1.1 |
 | Gomoku (five in a row, player vs player or player vs AI) | 1.0 |
 | Snake | 1.0 |
+| Sokoban (12 original levels) | 1.0 |
 | Tic-Tac-Toe (player vs player or player vs AI) | 1.2 |
 | Tetris | 1.1 |
 
@@ -101,6 +102,12 @@ run `BUILD` in their folders.
 ![](./GAMES/SNAKE/SCREEN01.GIF)
 
 ![](./GAMES/SNAKE/SCREEN02.GIF)
+
+### Sokoban
+
+![](./GAMES/SOKOBAN/SCREEN01.GIF)
+
+![](./GAMES/SOKOBAN/SCREEN02.GIF)
 
 ### Tic-Tac-Toe
 
