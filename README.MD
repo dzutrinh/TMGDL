@@ -13,15 +13,41 @@ Supported compilers:
 - Turbo/Borland Pascal 7.0 (16-bit)
 - Free Pascal 3.2 for go32v2 (32-bit, needs `CWSDPMI.EXE` at run time)
 
-## Contents
+## Games
 
-| Folder | Contents |
+| Game | Version | What it is |
+| --- | --- | --- |
+| [2048](#2048) | 1.4 | Slide and merge tiles to reach 2048 |
+| [Arkanoid](#arkanoid) | 1.0 | Brick breaker with power-up capsules |
+| [Chomp](#chomp) | 1.0 | Maze game: eat the dots, avoid four ghosts |
+| [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
+| [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
+| [Snake](#snake) | 1.0 | Eat apples, grow longer, dodge the obstacles |
+| [Sokoban](#sokoban) | 1.0 | Push the crates onto the goals, 12 levels |
+| [Tetris](#tetris) | 1.1 | The falling-blocks classic |
+| [Tic-Tac-Toe](#tic-tac-toe) | 1.2 | Noughts and crosses against a friend or the computer |
+
+## Tools
+
+| Tool | Version | What it is |
+| --- | --- | --- |
+| [PM](#pm-package-manager) | 1.1 | Full-screen package manager, creates installer packages |
+| [PCK](#pck-command-line-packer) | 1.1 | Command-line package tool |
+| [SFX](#sfx-self-extractor) | 1.1 | Self-extractor stub for packages |
+| [INSTALL](#install-installer) | 1.1 | Installs a package with the settings of `INSTALL.DAT` |
+| [ASCII](#ascii-character-map) | - | Character map of the text-mode font |
+| [SCANCODE](#scancode-key-code-viewer) | - | Shows the codes of the keys pressed |
+| [VIEWBIN](#viewbin-screen-dump-viewer) | - | Shows a screen dump saved with F12 |
+
+## Library
+
+| Unit | Contents |
 | --- | --- |
-| `SRC` | The library: `LIBTEXT` (screen, keyboard, timer, dialogs), `LIBCTLS` (controls), `LIBUTIL` (files, folders, drives, config, CRC32), `LIBPACK` (packages), `LIBTMGD` (uses them all) |
-| `GAMES` | 2048, Arkanoid, Chomp, Game of Life, Gomoku, Snake, Sokoban, Tic-Tac-Toe and Tetris |
-| `TOOLS/PCKMGR` | `PM` package manager, `PCK` command-line packer, `SFX` self-extractor stub |
-| `TOOLS/INSTALL` | Installer driven by `INSTALL.DAT` and a package file |
-| `TOOLS` | `ASCII` character map, `SCANCODE` key code viewer, `VIEWBIN` screen dump viewer |
+| `LIBTEXT` | Screen, clipping, virtual screens, ANSI art, boxes, dialogs, keyboard, millisecond timer |
+| `LIBCTLS` | Controls: menus, lists, sliders, gauges, counters, labels, help viewer, life box |
+| `LIBUTIL` | Files, folders, drives, configuration and text files, CRC32, message boxes |
+| `LIBPACK` | Package (resource archive) files: create, extract, add, delete, verify, self-extractors |
+| `LIBTMGD` | Uses all of the above, plus version and compiler information |
 
 ## Building
 
@@ -60,29 +86,31 @@ the `PATH`.
 compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
-The executables stored in the game folders come from earlier releases; rebuild
-them to get the versions below. Arkanoid, Chomp, Gomoku, Snake and Sokoban ship
-as source only: run `BUILD` in their folders.
+The executables stored in some game folders come from earlier releases;
+rebuild them to get the versions listed here. Arkanoid, Chomp, Gomoku, Snake
+and Sokoban ship as source only: run `BUILD` in their folders.
 
-## Games
-
-| Game | Version |
-| --- | --- |
-| 2048 (updated version from https://github.com/dzutrinh/2048) | 1.4 |
-| Arkanoid (brick breaker with power-ups) | 1.0 |
-| Chomp (maze game: eat the dots, avoid the ghosts) | 1.0 |
-| Game of Life | 1.1 |
-| Gomoku (five in a row, player vs player or player vs AI) | 1.0 |
-| Snake | 1.0 |
-| Sokoban (12 original levels) | 1.0 |
-| Tic-Tac-Toe (player vs player or player vs AI) | 1.2 |
-| Tetris | 1.1 |
+## Games in detail
 
 ### 2048
 
-![](./GAMES/2048/SCREEN.GIF)
+Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. Tiles slide with an animation, the game is saved on exit and resumed next time, and the best score is kept.
+
+Keys: `W` `A` `S` `D` slide, `R` new game, `?` help, `!` about, `ESC` quit.
+
+Folder: [`GAMES/2048`](./GAMES/2048)
+
+![](./GAMES/2048/SCREEN01.GIF)
+
+![](./GAMES/2048/SCREEN02.GIF)
 
 ### Arkanoid
+
+Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds.
+
+Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
+
+Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 
 ![](./GAMES/ARKANOID/SCREEN01.GIF)
 
@@ -90,15 +118,35 @@ as source only: run `BUILD` in their folders.
 
 ### Chomp
 
+A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board.
+
+Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
+
+Folder: [`GAMES/CHOMP`](./GAMES/CHOMP)
+
 ![](./GAMES/CHOMP/SCREEN01.GIF)
 
 ![](./GAMES/CHOMP/SCREEN02.GIF)
 
 ### Game of Life
 
+Conway's cellular automaton: cells are born and die by the number of their neighbours. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
+
+Keys: `SPACE` step/auto, `ENTER` next generation, `LEFT`/`RIGHT` speed, `P` pause, `R` random colony, `ESC` back. In the editor: arrows or `W` `A` `S` `D` move, `SPACE` toggles a cell, `P` places a pattern (`TAB` picks it, `ENTER` drops it), `C` clears, `F` fills.
+
+Folder: [`GAMES/GOL`](./GAMES/GOL)
+
+![](./GAMES/GOL/SCREEN01.GIF)
+
 ![](./GAMES/GOL/SCREEN02.GIF)
 
 ### Gomoku
+
+Five in a row on a 15 x 15 wooden board. Two players, or one against the computer at the easy, medium or hard level; play black, white, or alternate between games. Take back moves, and optionally only an exact five wins.
+
+Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `H` help, `?` about, `ESC` quit.
+
+Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
 
 ![](./GAMES/GOMOKU/SCREEN01.GIF)
 
@@ -106,40 +154,73 @@ as source only: run `BUILD` in their folders.
 
 ### Snake
 
+Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, and an option to go through the edges.
+
+Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
+
+Folder: [`GAMES/SNAKE`](./GAMES/SNAKE)
+
 ![](./GAMES/SNAKE/SCREEN01.GIF)
 
 ![](./GAMES/SNAKE/SCREEN02.GIF)
 
 ### Sokoban
 
+Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level.
+
+Keys: arrows or `W` `A` `S` `D` walk and push, `U` undo, `R` restart, `N`/`B` next/previous level, `ESC` pause menu (continue, restart level, quit to main menu).
+
+Folder: [`GAMES/SOKOBAN`](./GAMES/SOKOBAN)
+
 ![](./GAMES/SOKOBAN/SCREEN01.GIF)
 
 ![](./GAMES/SOKOBAN/SCREEN02.GIF)
 
-### Tic-Tac-Toe
-
-![](./GAMES/T3/SCREEN02.GIF)
-
 ### Tetris
+
+Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode and a leader board.
+
+Keys: `A` `S` `D` move, `W`/`Q` spin, `SPACE` drop (or arrows, `/` and `ENTER`), `H` hint, `B` colour-blind, `P` pause, `ESC` quit.
+
+Folder: [`GAMES/TETRIS`](./GAMES/TETRIS)
+
+![](./GAMES/TETRIS/SCREEN01.GIF)
 
 ![](./GAMES/TETRIS/SCREEN02.GIF)
 
-## Tools
+### Tic-Tac-Toe
 
-### Package manager (PM 1.1)
+Noughts and crosses on a 3 x 3 board, against a friend or the computer at three levels (the hard one searches every move with minimax). Choose the colours of the players, or hearts instead of noughts.
+
+Keys: `W` `A` `S` `D` move, `SPACE` play, `H` help, `ESC` quit.
+
+Folder: [`GAMES/T3`](./GAMES/T3)
+
+![](./GAMES/T3/SCREEN01.GIF)
+
+![](./GAMES/T3/SCREEN02.GIF)
+
+## Tools in detail
+
+### PM (package manager)
 
 A two-panel file manager for package files: pack and unpack files (or add to
 and delete from an existing package), verify checksums, view package
 information, copy, move and rename files, and build self-extracting
 executables. **CREATE INSTALLER PACKAGE** (`CTRL-I`) packs the marked files
-and writes `INSTALL.DAT` for the installer, with the exact package size. Press
-F1 for the key list.
+and writes `INSTALL.DAT` for the installer, with the exact package size; its
+form is filled from an `INSTALL.DAT` already in the folder. Press `F1` for the
+key list.
+
+Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
 
 ![](./TOOLS/PCKMGR/SCREEN01.GIF)
 
 ![](./TOOLS/PCKMGR/SCREEN02.GIF)
 
-`PCK` does the same from the command line:
+### PCK (command-line packer)
+
+Does what PM does, from the command line or a batch file:
 
 ```
 PCK L GAMES.PCK                 list
@@ -151,18 +232,72 @@ PCK D GAMES.PCK OLD.EXE         delete files
 PCK S GAMES.PCK SETUP           make SETUP.EXE, a self-extractor
 ```
 
-### Installer (INSTALL 1.1)
+Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
+
+### SFX (self-extractor)
+
+The stub that PM (`CTRL-E`) and PCK (`S`) put in front of a package to make a
+self-extracting executable. Keep `SFX.EXE` next to `PM.EXE` and `PCK.EXE`.
+The executable unpacks itself into the current folder, or into the folder
+given on its command line.
+
+Folder: [`TOOLS/PCKMGR`](./TOOLS/PCKMGR)
+
+### INSTALL (installer)
 
 Installs the files of a package into a chosen drive and folder, after checking
 the package size and the free disk space; PACKAGE VERIFICATION checks the
-package checksum on request. `INSTALL.DAT` holds
-the package name, description, default drive and folder, needed space
-(`SPACE`), and the package file and its exact size (`SIZE`). PM creates both
-files (`CTRL-I`).
+package checksum on request. `INSTALL.DAT` holds the package name,
+description, license, default drive and folder, needed space (`SPACE`), and
+the package file and its exact size (`SIZE`). PM creates both files
+(`CTRL-I`); put `INSTALL.EXE` with them.
+
+```
+[INFO]
+PACKAGE   = Text-mode games collection
+DESC      = Version ~0F1.0
+LICENSE   = This is a ~03FREEWARE
+DISK      = C
+FOLDER    = TMG
+SPACE     = 1024000
+
+[FILE]
+PACKAGE   = INSTALL.PCK
+SIZE      = 683365
+```
+
+Folder: [`TOOLS/INSTALL`](./TOOLS/INSTALL)
 
 ![](./TOOLS/INSTALL/SCREEN01.GIF)
 
 ![](./TOOLS/INSTALL/SCREEN02.GIF)
+
+### ASCII (character map)
+
+Shows the 256 characters of the text-mode font; pick one to see its code in
+hexadecimal and decimal. Handy for drawing boxes and ANSI art.
+
+Folder: [`TOOLS`](./TOOLS)
+
+![](./TOOLS/ASCII.GIF)
+
+### SCANCODE (key code viewer)
+
+Shows the code `getkey` returns for every key pressed, with a short history,
+to find the `KEY_...` value of a key. `ESC` quits.
+
+Folder: [`TOOLS`](./TOOLS)
+
+![](./TOOLS/SCANCODE.GIF)
+
+### VIEWBIN (screen dump viewer)
+
+`VIEWBIN FILE.BIN` shows a screen dump (4000 bytes of characters and
+colours), like the ones the games save with `F12`.
+
+Folder: [`TOOLS`](./TOOLS)
+
+![](./TOOLS/VIEWBIN.GIF)
 
 ## What's new in 1.5
 
