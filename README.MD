@@ -406,7 +406,7 @@ Folder: [`GAMES/MINES`](./GAMES/MINES)
 
 ### Pipes
 
-Water will soon pour from the tap: lay a pipeline for it with the pieces of the dispenser, straights, corners and crosses, before the clock runs out. The water then runs through every pipe that fits, and the level counts when it has filled enough of them before it spills. Crosses can be filled both ways for a bonus, dry pipes can be replaced at a cost, and `F` lets the water go at once for double points. More rocks, less time and faster water on every level; three tries.
+Water will soon pour from the tap: lay a pipeline for it with the pieces of the dispenser, straights, corners and crosses, before the clock runs out. The water then runs through every pipe that fits, and the level counts when it has filled enough of them before it spills. Crosses can be filled both ways for a bonus, dry pipes can be replaced at a cost, and `F` lets the water go at once for double points. More rocks, less time and faster water on every level; three tries. The pipes are drawn in the 160 x 100 mode, and the water runs through them a pixel at a time.
 
 Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` lay a piece, `F` water now, `P` pause, `H` help, `ESC` quit.
 
@@ -650,8 +650,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Gomoku, Invaders, Lander, Reversi, Runner, Snake,
-  Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
+  Life (100 x 100 cells), Gomoku, Invaders, Lander, Pipes, Reversi, Runner,
+  Snake, Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
