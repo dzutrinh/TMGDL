@@ -260,7 +260,7 @@ Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 
 ### Chomp
 
-A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board.
+A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board. The maze is drawn in half-block pixels: the walls are thin outlines, and the ghosts and the player glide from cell to cell.
 
 Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
 
@@ -370,7 +370,7 @@ Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
 
 ### Runner
 
-A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board.
+A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board. Every tile is 2 x 3 half-block pixels, so the field fills the height of the screen, with ladder rungs, holes that fill up from below, and runners that glide from tile to tile.
 
 Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
 
@@ -586,8 +586,11 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
-- Game of Life, Arkanoid and Snake draw their fields in half-block pixels, for
-  four times as many cells (Life, Snake) or twice the height (Arkanoid).
+- Game of Life, Arkanoid, Snake, Chomp and Runner draw their fields in
+  half-block pixels, for four times as many cells (Life, Snake), twice the
+  height (Arkanoid), a maze with thin walls whose ghosts glide between cells
+  (Chomp), or a field half as tall again with drawn ladders and runners
+  (Runner).
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
