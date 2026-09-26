@@ -38,6 +38,7 @@ begin
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
+	SND_ENABLED := GAME_CONFIG.sound;
 	if GAME_CONFIG.mode > PVA then GAME_CONFIG.mode := APP_DEFAULT_CFG.mode;
 	if GAME_CONFIG.level > HARD then GAME_CONFIG.level := APP_DEFAULT_CFG.level;
 	if GAME_CONFIG.clrX > 15 then GAME_CONFIG.clrX := APP_DEFAULT_CFG.clrX;
@@ -316,6 +317,7 @@ begin
 				if cell = NULL then	{ dont overwrite previous moves }
 				begin
                     gameMoveHuman(c, r);
+                    snd_play(SFX_CLICK);
                     gameStatus(FALSE);
 					boardDraw(game.board);
 					state := gameState;
@@ -325,6 +327,7 @@ begin
 						begin
 							labelSetText(notif, '~03THINKING');
 							gameMoveComputer;
+							snd_play(SFX_BLIP);
 							sleep(320);
 							boardDraw(game.board);
 							state := gameState;
@@ -335,6 +338,7 @@ begin
 				else
 				begin
 					labelSetText(notif, '~04INVALID MOVE');
+					snd_play(SFX_ERROR);
 					sleep(320);
 				end;
 			KEY_ESC:
@@ -348,17 +352,22 @@ begin
 				begin
 					labelSetText(notif, '  PLAYER '+gamePlayerSymbol(COMPUTER)+' ~07WINS!  ');
 					counterIncrease(game.cWinX);
+					if GAME_CONFIG.mode = PVA then
+						snd_play(SFX_DIE)
+					else	snd_play(SFX_WIN);
 					wait([#13,#27,#32]);
 				end;
 			GAME_NOUGHT:
 				begin
 					labelSetText(notif, '  PLAYER '+gamePlayerSymbol(HUMAN)+' ~07WINS!  ');
 					counterIncrease(game.cWinO);
+					snd_play(SFX_WIN);
 					wait([#13,#27,#32]);
 				end;
 			GAME_DRAW:	begin
 					labelSetText(notif, '  IT''S A ~0ETIE~07!  ');
 					counterIncrease(game.cDraw);
+					snd_play(SFX_FALL);
 					wait([#13,#27,#32]);
 				end;
 			end;
@@ -396,6 +405,8 @@ begin
 	menuAppend(op, ' ['+IS_HEART[GAME_CONFIG.isHeart]+'] USE HEART ICON ', CMD_OPT_ICON, FALSE, nil);
 	menuAppend(op, '     CROSS : ['+COLOR_NAMES[GAME_CONFIG.clrX]+'] ', CMD_OPT_COLOR_X,  FALSE, nil);
 	menuAppend(op, '     NOUGHT: ['+COLOR_NAMES[GAME_CONFIG.clrO]+'] ', CMD_OPT_COLOR_O,  FALSE, nil);
+	menuSeparator(op);
+	menuAppend(op, ' '+C_ONOFF[GAME_CONFIG.sound]+' SOUND EFFECTS  ', CMD_OPT_SOUND, FALSE, nil);
 
 	gm := menuCreate;
 	menuAppend(gm, '   VS HUMAN       ', CMD_MODE_HUMAN,  FALSE, nil);
@@ -466,6 +477,12 @@ begin
 			begin
                         	GAME_CONFIG.isHeart := not GAME_CONFIG.isHeart;
 				menuModify(op, CMD_OPT_ICON, ' ['+IS_HEART[GAME_CONFIG.isHeart]+'] USE HEART ICON ', FALSE, nil);
+			end;
+                CMD_OPT_SOUND:
+			begin
+				GAME_CONFIG.sound := not GAME_CONFIG.sound;
+				SND_ENABLED := GAME_CONFIG.sound;
+				menuModify(op, CMD_OPT_SOUND, ' '+C_ONOFF[GAME_CONFIG.sound]+' SOUND EFFECTS  ', FALSE, nil);
 			end;
                 CMD_OPT_COLOR_X:
                         repeat

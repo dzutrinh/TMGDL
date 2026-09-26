@@ -33,6 +33,9 @@ Supported compilers:
 | [Tetris](#tetris) | 1.1 | The falling-blocks classic |
 | [Tic-Tac-Toe](#tic-tac-toe) | 1.2 | Noughts and crosses against a friend or the computer |
 
+Every game plays sound effects on the PC speaker; they can be turned off in
+its menu (in 2048, with `M`).
+
 ## Tools
 
 | Tool | Version | What it is |
@@ -228,7 +231,7 @@ and Sokoban ship as source only: run `BUILD` in their folders.
 
 Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. Tiles slide with an animation, the game is saved on exit and resumed next time, and the eight best scores are kept.
 
-Keys: `W` `A` `S` `D` slide, `R` new game, `H` high scores, `?` help, `!` about, `ESC` quit.
+Keys: `W` `A` `S` `D` slide, `R` new game, `H` high scores, `M` sound on/off, `?` help, `!` about, `ESC` quit.
 
 Folder: [`GAMES/2048`](./GAMES/2048)
 
@@ -238,7 +241,7 @@ Folder: [`GAMES/2048`](./GAMES/2048)
 
 ### Arkanoid
 
-Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds and sound effects.
+Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds.
 
 Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
 
@@ -250,7 +253,7 @@ Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
 
 ### Chomp
 
-A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels, sound effects and a leader board.
+A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board.
 
 Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
 
@@ -324,7 +327,7 @@ Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
 
 ### Runner
 
-A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Sound effects and a leader board.
+A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board.
 
 Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
 
@@ -336,7 +339,7 @@ Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
 
 ### Snake
 
-Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, sound effects and a leader board.
+Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board.
 
 Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
 
@@ -372,7 +375,7 @@ Folder: [`GAMES/SOLITAIR`](./GAMES/SOLITAIR)
 
 ### Tetris
 
-Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode, sound effects and a leader board.
+Fit the falling pieces into full lines to clear them. Speed and starting height can be chosen, with a shadow hint, the next piece, a colour-blind mode and a leader board.
 
 Keys: `A` `S` `D` move, `W`/`Q` spin, `SPACE` drop (or arrows, `/` and `ENTER`), `H` hint, `B` colour-blind, `P` pause, `ESC` quit.
 
@@ -525,11 +528,11 @@ Folder: [`TOOLS`](./TOOLS)
 - Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
   lines, rectangles and circles.
 - `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
-  the language of BASIC's `PLAY`, played in the background. Arkanoid, Chomp,
-  Runner, Snake and Tetris have sound effects, with an option to turn them off.
+  the language of BASIC's `PLAY`, played in the background. Every game has sound
+  effects, with an option to turn them off.
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
-  keeping its own; the scores are kept in `.HI` files (older scores and saved
-  settings are reset once).
+  keeping its own; the scores are kept in `.HI` files. The scores of older
+  versions, and the settings of some games, are reset once.
 - DEMO, a tool that shows the pixels and the music.
 
 ## Known issues

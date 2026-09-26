@@ -40,6 +40,7 @@ type    INDEX_TYPE = 1..BOARD_SIZE;	{ indexing to the board }
 		clrO	: byte;		{ color for O             }
                 isHeart	: boolean;	{ use heart icon flag     }
 		reserve	: byte;		{ padding                 }
+		sound	: boolean;	{ sound effects           }
         end;
 
 	GAME_TYPE = record
@@ -65,6 +66,7 @@ const	CMD_GAME_START	= 1000;
         CMD_OPT_ICON	= 1020;
         CMD_OPT_COLOR_X	= 1021;
         CMD_OPT_COLOR_O	= 1022;
+        CMD_OPT_SOUND	= 1023;
 
 	CELL_WIDTH	= 8;
 	CELL_HEIGHT	= 4;
@@ -142,7 +144,8 @@ const	CMD_GAME_START	= 1000;
                  clrX	: $09;
                  clrO	: $0D;
                  isHeart: TRUE;
-		 reserve: 0);
+		 reserve: 0;
+		 sound	: TRUE);
 
 var	GAME_CONFIG	: APP_CONFIG;	{ active configuration }
 

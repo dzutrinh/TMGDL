@@ -43,6 +43,7 @@ const   GAME_WINCOND	: longint = 11;
 	FILE_SCORE	: string[13] = '2048.HI';
 	SCORE_NAMES	= 'GABRIELE|TWO|FOUR|EIGHT|SIXTEEN';
 	FILE_SAVE	: string[13] = '2048.SAV';
+	FILE_CONFIG	: string[13] = '2048.CNF';
 	CELL_COLORS  	: array[0..16] of byte =
 			($80, $70,
 			 $10, $20, $30, $40, $50, $90, $A0,
@@ -58,6 +59,13 @@ const
 	INFO_HISCORE	= 16;
 	INFO_MOVES	= 19;
 
+type	APP_CONFIG	= record
+		sound	: boolean;		{ sound effects }
+	end;
+
+const	APP_DEFAULT_CFG	: APP_CONFIG = (sound: TRUE);
+
 var	GAME_SCORES	: HISCORE_TABLE;		{ the best scores, in 2048.HI }
+	GAME_CONFIG	: APP_CONFIG;
 
 {$endif}

@@ -35,6 +35,7 @@ type    STATE		= byte;
                 invert	: boolean;		{ invert color        }
                 c_alive	: byte;			{ alive cell color    }
                 c_dead	: byte;			{ dead cell color     }
+                sound	: boolean;		{ sound effects       }
         end;
 
         MAP_MAGIC	= array[1..3] of char;	{ map file signature  }
@@ -76,6 +77,7 @@ const   FILE_CONFIG	: string[12] = 'GOL.CNF';
         CMD_ABOUT	= 1007;
         CMD_HELP	= 1008;
         CMD_EXIT	= 1009;
+        CMD_OPT_SOUND	= 1010;
 
         GAME_LOGO	: array[1..4] of string[PANEL_W+4] =
  			  ('~0F ڿڿڿ�ڿ  ڿڿ  � �ڿڿ ',
@@ -88,7 +90,8 @@ const   FILE_CONFIG	: string[12] = 'GOL.CNF';
                  step   : FALSE;
 		 invert	: FALSE;
 		 c_alive: 15;
-		 c_dead	: 3);
+		 c_dead	: 3;
+		 sound	: TRUE);
 
 var 	vscreen		: SCREEN;		{ double-buffering   }
 	GAME_COLONY	: COLONY;		{ our game colony    }

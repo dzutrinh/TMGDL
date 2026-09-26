@@ -22,7 +22,7 @@
 {$i ../../src/preps.inc}
 
 (* {$define __DEBUG__} *)
-uses	libtmgd, libtext, libctls, libutil;
+uses	libtmgd, libtext, libctls, libutil, libsnd;
 
 {$i backgd.inc}
 {$i globals.inc}

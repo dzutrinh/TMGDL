@@ -23,7 +23,7 @@
 
 (* {$define __DEBUG__} *)
 
-uses	libtmgd, libtext, libctls, libutil;
+uses	libtmgd, libtext, libctls, libutil, libsnd;
 
 {$i backgd.inc}			{ main screen data            }
 {$i globals.inc}		{ global constants, variables }

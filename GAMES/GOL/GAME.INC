@@ -38,6 +38,7 @@ begin
 
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
+	SND_ENABLED := GAME_CONFIG.sound;
 
 	randomize;
 
@@ -51,6 +52,7 @@ begin
         menuAppend(mOpt, '     ALIVE: '+COLOR_NAMES[GAME_CONFIG.c_alive], CMD_OPT_ALIVE,  FALSE, nil);
         menuAppend(mOpt, '     DEAD : '+COLOR_NAMES[GAME_CONFIG.c_dead],  CMD_OPT_DEAD,   FALSE, nil);
         menuAppend(mOpt, ' '+menuOnOff(GAME_CONFIG.invert)+' INVERT COLORS ',  CMD_OPT_INVERT, FALSE, nil);
+        menuAppend(mOpt, ' '+menuOnOff(GAME_CONFIG.sound)+' SOUND EFFECTS ',  CMD_OPT_SOUND,  FALSE, nil);
 
         mMain := menuCreate;
         menuAppend(mMain, '   START SIMULATION ', CMD_START,  FALSE, nil);
@@ -183,6 +185,7 @@ var     quit	: boolean;
         var	i, j	: integer;
 	begin
 		labelSetText(lSimul, MSG_RUN_RANDOM);
+		snd_play(SFX_JUMP);
 
 		init(GAME_COLONY);
                 for j:= 0 to FIELD_H-1 do
@@ -208,14 +211,20 @@ var     quit	: boolean;
         procedure	run_slower;
 	begin
 		if GAME_CONFIG.speed > SIMUL_SPEED_MIN then
+		begin
         		dec(GAME_CONFIG.speed);
+			snd_play(SFX_CLICK);
+		end;
                 gaugeSetValue(gSpeed, GAME_CONFIG.speed);
 	end;
 
         procedure	run_faster;
 	begin
 		if GAME_CONFIG.speed < SIMUL_SPEED_MAX then
+		begin
         		inc(GAME_CONFIG.speed);
+			snd_play(SFX_CLICK);
+		end;
                 gaugeSetValue(gSpeed, GAME_CONFIG.speed);
 
 	end;
@@ -251,6 +260,7 @@ begin
                               (key = KEY_ENTER) or (key = KEY_R);
                         case key of
                         KEY_ENTER:	begin
+						snd_play(SFX_CLICK);
 						evolve(GAME_COLONY);
 				                counterIncrease(cGen);
                         		end;
@@ -342,6 +352,7 @@ begin
                 KEY_ESC:	done := TRUE;
                 KEY_ENTER:	begin
 					p := PATTERNS_LIST[c].data;
+					snd_play(SFX_COIN);
                 			for j := 0 to PATTERNS_LIST[c].h-1 do
 			                for i := 0 to PATTERNS_LIST[c].w-1 do
 			                begin
@@ -351,7 +362,10 @@ begin
 			                end;
                                         done := TRUE;
 				end;
-		KEY_C: 		empty(GAME_COLONY);
+		KEY_C: 		begin
+					empty(GAME_COLONY);
+					snd_play(SFX_FALL);
+				end;
                 KEY_A,
                 KEY_LEFT:	if x > 0 then dec(x);
                 KEY_D,
@@ -403,7 +417,10 @@ begin
 		key := getkey;
                 cellular(GAME_COLONY, c, r, FALSE);
 		case key of
-		KEY_SPACE:      toggle(GAME_COLONY, c, r);
+		KEY_SPACE:      begin
+					toggle(GAME_COLONY, c, r);
+					snd_play(SFX_CLICK);
+				end;
                 KEY_P	 : 	begin
 					gamePlacePattern;
                                         change := TRUE;
@@ -423,18 +440,22 @@ begin
 		KEY_DOWN:	if r < FIELD_H-1 then inc(r) else r := 0;
 		KEY_C	: 	begin
 					empty(GAME_COLONY);
+					snd_play(SFX_FALL);
                                         change := TRUE;
                 		end;
                 KEY_F	: 	begin
                 			fill(GAME_COLONY);
+					snd_play(SFX_BLIP);
                                         change := TRUE;
                 		end;
                 KEY_I	:	begin
                 			invert(GAME_COLONY);
+					snd_play(SFX_BLIP);
                                         change := TRUE;
                 		end;
                 KEY_R	: 	begin
 					init(GAME_COLONY);
+					snd_play(SFX_JUMP);
                                         change := TRUE;
                 		end;
 		end;
@@ -461,7 +482,8 @@ begin
                 	gameInterface(UI_MENU);
 		        menuModify(mOpt, CMD_OPT_ALIVE,  '     ALIVE: '+COLOR_NAMES[GAME_CONFIG.c_alive], FALSE, nil);
         		menuModify(mOpt, CMD_OPT_DEAD,   '     DEAD : '+COLOR_NAMES[GAME_CONFIG.c_dead],  FALSE, nil);
-		        menuModify(mOpt, CMD_OPT_INVERT, ' '+menuOnOff(GAME_CONFIG.invert)+' INVERT   ',  FALSE, nil);
+		        menuModify(mOpt, CMD_OPT_INVERT, ' '+menuOnOff(GAME_CONFIG.invert)+' INVERT COLORS ', FALSE, nil);
+		        menuModify(mOpt, CMD_OPT_SOUND,  ' '+menuOnOff(GAME_CONFIG.sound)+' SOUND EFFECTS ',  FALSE, nil);
 	                render(GAME_COLONY);
                         change := FALSE;
                 end;
@@ -504,6 +526,11 @@ begin
                                         end
                                         else	info(SHADE_RED, 'COLOR CONFLICTED');
                 		end;
+                CMD_OPT_SOUND:	begin
+                                        GAME_CONFIG.sound := not GAME_CONFIG.sound;
+                                        SND_ENABLED := GAME_CONFIG.sound;
+                                        change := TRUE;
+				end;
                 CMD_OPT_INVERT:	begin
                                         GAME_CONFIG.invert := not GAME_CONFIG.invert;
                                         tmp := GAME_CONFIG.c_alive;
