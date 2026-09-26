@@ -356,7 +356,7 @@ Folder: [`GAMES/GOL`](./GAMES/GOL)
 
 ### Gomoku
 
-Five in a row on a 15 x 15 wooden board. Two players, or one against the computer at the easy, medium or hard level; play black, white, or alternate between games. Take back moves, and optionally only an exact five wins.
+Five in a row on a 15 x 15 wooden board, drawn in the 160 x 100 mode with a line through the winning stones. Two players, or one against the computer at the easy, medium or hard level; play black, white, or alternate between games. Take back moves, and optionally only an exact five wins.
 
 Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `H` help, `?` about, `ESC` quit.
 
@@ -648,7 +648,7 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Invaders, Lander, Reversi, Runner, Snake, Sokoban
+  Life (100 x 100 cells), Gomoku, Invaders, Lander, Reversi, Runner, Snake, Sokoban
   and Tetris play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
