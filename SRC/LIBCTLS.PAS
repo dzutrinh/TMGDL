@@ -2223,23 +2223,27 @@ begin
         log := nil;
 end;
 
+{ the lines may hold ~XY color codes, like print() }
 procedure	logviewDraw(const log: PLOGVIEW);
-var	i	: integer;
+var	i, n	: integer;
 	text	: STR80;
 begin
         for i := 0 to log^.h-1 do
 	begin
-        	if i < log^.count then
-	        	text := rpad(log^.log[i], log^.w)
-                else	text := rpad(' ', log^.w);
-                prints(log^.x, log^.y + i, log^.attr, text);
+        	if i < log^.count then text := log^.log[i] else text := '';
+        	n := text_length(text);
+                print(log^.x, log^.y + i, make_attr(log^.attr) + text);
+                if n < log^.w then prints(log^.x + n, log^.y + i, log^.attr, repl(' ', log^.w - n));
 	end;
 end;
 
 procedure	logviewAdd(var log: PLOGVIEW; text: STR80);
 var	i	: integer;
 begin
-        if length(text) >= log^.w then text[0] := chr(log^.w);
+	{ cut to the width, without leaving half a color code }
+        while text_length(text) > log^.w do dec(text[0]);
+        if (length(text) >= 1) and (text[length(text)] = '~') then dec(text[0]);
+        if (length(text) >= 2) and (text[length(text) - 1] = '~') then dec(text[0], 2);
         if log^.count < log^.h then
         begin
                 log^.log[log^.count] := text;

@@ -77,6 +77,8 @@ function	package_search(const pkg: PACKAGE; filename: string;
 			       var entry: PKGFILE_ENTRY): boolean;
 function        package_extract(var pkg: PACKAGE;
 			        filename, destdir: string): boolean;
+function	package_read(var pkg: PACKAGE; filename: string;
+			     var buf; max: longint): longint;
 function        package_verify(const pkg: PACKAGE): CRC32_TYPE;
 function	package_checksum(const pkg: PACKAGE): CRC32_TYPE;
 function	package_aborted: boolean;
@@ -612,6 +614,41 @@ begin
         {$I+}
 
         package_extract := ok;
+end;
+
+{ read a file of a package into memory, at most max bytes: returns the }
+{ bytes read, or -1 if the file is not there or cannot be read          }
+function	package_read(var pkg: PACKAGE; filename: string; var buf; max: longint): longint;
+var	idx,
+	total,
+	done	: longint;
+	chunk,
+	nr	: word;
+	p	: pchar;
+begin
+	package_read := -1;
+	if (pkg = nil) or (max < 0) then exit;
+	if pkg^.mode = PFM_CREATE then exit;
+	idx := package_lookup(pkg, filename);
+	if idx = 0 then exit;
+
+	total := pkg^.list^[idx].size;
+	if total > max then total := max;
+	p := @buf;
+	done := 0;
+	{$I-}
+	seek(pkg^.handle, pkg^.base + pkg^.list^[idx].offset);
+	if ioresult <> 0 then exit;
+	while done < total do
+	begin
+		{ blockread takes a word count under Borland Pascal }
+		if total - done > 32768 then chunk := 32768 else chunk := total - done;
+		blockread(pkg^.handle, p[done], chunk, nr);
+		if (ioresult <> 0) or (nr <> chunk) then exit;
+		inc(done, nr);
+	end;
+	{$I+}
+	package_read := done;
 end;
 
 { checksum of the file data, 0 when cancelled (see package_aborted) }
