@@ -32,10 +32,6 @@ begin
         if ltx_mono then
         	die(-1, 'EGA/VGA adapter is required');
 
-	vscreen := vscreen_alloc;
-	if vscreen = nil then
-		die(-1, 'Not enough memory for double-buffering');
-
         if not config_load(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG)) then
                 GAME_CONFIG := APP_DEFAULT_CFG;
 	SND_ENABLED := GAME_CONFIG.sound;
@@ -88,7 +84,6 @@ begin
         config_save(FILE_CONFIG, GAME_CONFIG, sizeof(APP_CONFIG));
 
 	destroy(GAME_COLONY);
-	vscreen_free(vscreen);
 
 	cursor(CURSOR_ON);
 	ltx_done;
@@ -114,53 +109,7 @@ begin
 	for i := 1 to 4 do print(PANEL_X, PANEL_Y + i, GAME_LOGO[i]);
         shaded_box(PANEL_X, PANEL_Y + 6, PANEL_W, 3, SHADE_CYAN, AF_LEFT, 'STATUS');
 
-        case ui of
-        UI_MENU:
-		begin
-	        	labelSetText(lStatus, MSG_READY);
-        	end;
-        UI_RUN:
-		begin
-                	labelSetText(lStatus, MSG_RUN);
-
-                	shaded_box(PANEL_X + 13, PANEL_Y + 12,
-			           13, 3, SHADE_BLUE, AF_LEFT, 'SIMUL.');
-
-		  	shaded_box(PANEL_X, PANEL_Y + 15, PANEL_W, 9, SHADE_WHITE, AF_LEFT, 'SIMUL. CONTROLS');
-                        print(PANEL_X + 2, PANEL_Y + 16, '~07.  ~0BSPACE: ~03STEP~07/~03AUTO');
-                        print(PANEL_X + 2, PANEL_Y + 17, '~07.  ~0BENTER: ~03STEPPING');
-                        print(PANEL_X + 2, PANEL_Y + 18, '~07.  ~0A    P: ~02PAUSE~07/~02RESUME');
-                        print(PANEL_X + 2, PANEL_Y + 19, '~07.  ~0A    R: ~02RANDOMIZE');
-                        print(PANEL_X + 2, PANEL_Y + 20, '~07.  ~0D LEFT: ~05SLOWER');
-                        print(PANEL_X + 2, PANEL_Y + 21, '~07.  ~0DRIGHT: ~05FASTER');
-                        print(PANEL_X + 2, PANEL_Y + 22, '~07.  ~0C  ESC: ~04BACK');
-		end;
-        UI_EDIT:
-		begin
-			labelSetText(lStatus, MSG_EDIT);
-
-		  	shaded_box(PANEL_X, PANEL_Y + 15, PANEL_W, 9, SHADE_WHITE, AF_LEFT, 'EDITOR CONTROLS');
-                        print(PANEL_X + 2, PANEL_Y + 16, '~07.  ~0BSPACE: ~03TOGGLE CELL');
-                        print(PANEL_X + 2, PANEL_Y + 17, '~07.~0CW~07/~0ES~07/~0AA~07/~09D: ~02MOVE CURSOR');
-                        print(PANEL_X + 2, PANEL_Y + 18, '~07.      ~0EP: ~06PATTERNS');
-                        print(PANEL_X + 2, PANEL_Y + 19, '~07.      ~0DC: ~05CLEAR');
-                        print(PANEL_X + 2, PANEL_Y + 20, '~07.      ~0DI: ~05INVERT MAP');
-                        print(PANEL_X + 2, PANEL_Y + 21, '~07.      ~0DR: ~05RANDOMIZE');
-                        print(PANEL_X + 2, PANEL_Y + 22, '~07.  ~0C  ESC: ~04BACK');
-		end;
-        UI_PLACE:
-        	begin
-			labelSetText(lStatus, MSG_PLACE);
-
-		  	shaded_box(PANEL_X, PANEL_Y + 15, PANEL_W, 8, SHADE_WHITE, AF_LEFT, 'EDITOR CONTROLS');
-                        print(PANEL_X + 2, PANEL_Y + 16, '~07.   ~0CW~07/~0ES~07/~0AA~07/~09D: ~02MOVE');
-                        print(PANEL_X + 2, PANEL_Y + 17, '~07.       ~0BTAB: ~03NEXT');
-                        print(PANEL_X + 2, PANEL_Y + 18, '~07. ~0BSHIFT~07-~0BTAB: ~03PREV');
-                        print(PANEL_X + 2, PANEL_Y + 19, '~07.         ~0DC: ~05CLEAR');
-                        print(PANEL_X + 2, PANEL_Y + 20, '~07.     ~0EENTER: ~06ACCEPT');
-                        print(PANEL_X + 2, PANEL_Y + 21, '~07.     ~0C  ESC: ~04CANCEL');
-                end;
-        end;
+	labelSetText(lStatus, MSG_READY);
 
         counterShow(cGen);
         labelShow(lStatus);
@@ -168,45 +117,80 @@ begin
 	gameShowVersion;
 end;
 
+{ the panel beside the colony on the 160 x 100 screen: the name, what is }
+{ going on, the generation or the cursor, and the keys                   }
+procedure	lpanel(ui: UI_MODE; state: string; gen: longint; x, y: integer);
+const	NAME		: string[4] = 'LIFE';
+	NAME_COLORS	: array[1..4] of byte = (15, 14, 10, 2);
+	RUN_KEYS	: array[1..7] of string[15] =
+			  ('SPC STEP/AUTO', 'ENTER 1 STEP', 'P PAUSE', 'R RANDOM',
+			   '<- SLOWER', '-> FASTER', 'ESC BACK');
+	EDIT_KEYS	: array[1..8] of string[15] =
+			  ('SPC TOGGLE', 'ARROWS MOVE', 'P PATTERNS', 'C CLEAR',
+			   'F FILL', 'I INVERT', 'R RANDOM', 'ESC BACK');
+	PLACE_KEYS	: array[1..6] of string[15] =
+			  ('ARROWS MOVE', 'TAB NEXT', 'SHIFT-TAB BACK', 'C CLEAR',
+			   'ENTER PUT', 'ESC CANCEL');
+var	i	: integer;
+begin
+	lores_bar(FIELD_W, 0, LORES_W - FIELD_W, LORES_H, 0);
+	lores_bar(FIELD_W, 0, 1, LORES_H, 8);
+	for i := 1 to 4 do
+	begin
+		lores_bar(LPANEL_X + (i - 1) * 9, 2, 8, 9, NAME_COLORS[i]);
+		lores_text(LPANEL_X + (i - 1) * 9 + 3, 4, NAME[i], 0);
+	end;
+	lores_text(LPANEL_X, 16, state, 11);
+	case ui of
+	UI_RUN:
+		begin
+			lores_text(LPANEL_X, 25, 'GENERATION', 7);
+			lores_text(LPANEL_X, 31, ltoa(gen), 15);
+			lores_text(LPANEL_X, 40, 'SPEED', 7);
+			for i := 1 to SIMUL_SPEED_MAX do
+				if i <= GAME_CONFIG.speed then
+					lores_bar(LPANEL_X + 22 + (i - 1) * 3, 40, 2, 5, 10)
+				else	lores_bar(LPANEL_X + 22 + (i - 1) * 3, 40, 2, 5, 8);
+			for i := 1 to 7 do lores_text(LPANEL_X, 52 + (i - 1) * 6, RUN_KEYS[i], 8);
+		end;
+	UI_EDIT, UI_PLACE:
+		begin
+			lores_text(LPANEL_X, 25, 'X ' + itoa(x + 1), 15);
+			lores_text(LPANEL_X + 28, 25, 'Y ' + itoa(y + 1), 15);
+			if ui = UI_EDIT then
+				for i := 1 to 8 do lores_text(LPANEL_X, 40 + (i - 1) * 6, EDIT_KEYS[i], 8)
+			else	for i := 1 to 6 do lores_text(LPANEL_X, 40 + (i - 1) * 6, PLACE_KEYS[i], 8);
+		end;
+	end;
+end;
+
 procedure	gameRun;
 var     quit	: boolean;
 	key	: word;
-        oldscr	: SCREEN;
-	lSimul	: PLABEL;
-	gSpeed	: PGAUGE;
+	gen	: longint;
+	state	: string;
+
+	procedure	run_show;
+	begin
+		fieldDraw(GAME_COLONY);
+		lpanel(UI_RUN, state, gen, 0, 0);
+		lores_flip;
+	end;
 
 	procedure	run_pause;
 	begin
-		labelSetText(lSimul, MSG_RUN_PAUSED);
-		vscreen_flip(vscreen);
+		state := 'PAUSED';
+		run_show;
 		if wait([#27, #13, 'P']) = #27 then quit := TRUE;
 	end;
 
 	procedure	run_randomize;
-        var	i, j	: integer;
 	begin
-		labelSetText(lSimul, MSG_RUN_RANDOM);
+		state := 'RANDOMIZE';
 		snd_play(SFX_JUMP);
-
 		init(GAME_COLONY);
-                for j:= 0 to FIELD_H-1 do
-                begin
-                	for i := 0 to FIELD_W-1 do
-				cellular(GAME_COLONY, i, j, FALSE);
-	                vsync;
-        	        vscreen_flip(vscreen);
-                end;
-		counterReset(cGen);
-
-		vsync;
-		vscreen_flip(vscreen);
+		gen := 0;
         	run_pause;
-	end;
-
-	procedure	run_render;
-	begin
-		sleep((SIMUL_SPEED_MAX-GAME_CONFIG.speed+1) * 16);
-		vscreen_flip(vscreen);
 	end;
 
         procedure	run_slower;
@@ -216,7 +200,6 @@ var     quit	: boolean;
         		dec(GAME_CONFIG.speed);
 			snd_play(SFX_CLICK);
 		end;
-                gaugeSetValue(gSpeed, GAME_CONFIG.speed);
 	end;
 
         procedure	run_faster;
@@ -226,32 +209,20 @@ var     quit	: boolean;
         		inc(GAME_CONFIG.speed);
 			snd_play(SFX_CLICK);
 		end;
-                gaugeSetValue(gSpeed, GAME_CONFIG.speed);
-
 	end;
 
 begin
-        oldscr 		:= vscreen_activate(vscreen);
-	quit   		:= FALSE;
-
-        gameInterface(UI_RUN);
-        gSpeed  := gaugeCreate(GAME_CONFIG.speed, PANEL_X, PANEL_Y + 12, PANEL_W2 - 1,
-        			SIMUL_SPEED_MIN, SIMUL_SPEED_MAX, GSF_HAS_BORDER,
-				SHADE_BLUE, SHADE_TRAFFIC, 'SPEED');
-	lSimul	:= labelCreate(PANEL_X + 15, PANEL_Y + PANEL_W2, PANEL_W2-4, '');
-	labelShow(lSimul);
-        gaugeShow(gSpeed);
-
-	render(GAME_COLONY);
-	vscreen_flip(vscreen);
+	if not lores_init then
+	begin
+		info(SHADE_RED, 'THE SIMULATION NEEDS AN EGA OR VGA CARD.');
+		exit;
+	end;
+	quit := FALSE;
+	gen  := counterGetValue(cGen);
 	repeat
-                render(GAME_COLONY);
-
-                if GAME_CONFIG.step then
-                	labelSetText(lSimul, MSG_RUN_STEPPING)
-                else	labelSetText(lSimul, MSG_RUN_AUTO);
-
-		run_render;
+                if GAME_CONFIG.step then state := 'STEPPING' else state := 'RUNNING';
+		run_show;
+		sleep((SIMUL_SPEED_MAX-GAME_CONFIG.speed+1) * 16);
 
 		if GAME_CONFIG.step then
 		begin
@@ -263,7 +234,7 @@ begin
                         KEY_ENTER:	begin
 						snd_play(SFX_CLICK);
 						evolve(GAME_COLONY);
-				                counterIncrease(cGen);
+				                inc(gen);
                         		end;
                         KEY_ESC:        quit := TRUE;
 			KEY_SPACE:	GAME_CONFIG.step := FALSE;
@@ -273,7 +244,7 @@ begin
                 else
 		begin
 			evolve(GAME_COLONY);
-			counterIncrease(cGen);
+			inc(gen);
                 end;
 
 		if keypressed then
@@ -289,9 +260,8 @@ begin
 			end;
 		end;
 	until quit;
-        labelDestroy(lSimul);
-        gaugeDestroy(gSpeed);
-        vscreen_activate(oldscr);
+	lores_done;
+	counterSetValue(cGen, gen);
 end;
 
 procedure	gameAbout;
@@ -313,6 +283,7 @@ begin
 	prints(72, 25, $08, 'v' + vtos(GAME_VERSION, GAME_BUILD));
 end;
 
+{ put one of the patterns on the colony; the 160 x 100 screen is on }
 procedure	gamePlacePattern;
 var	i, j,
 	x, y	: integer;
@@ -320,32 +291,20 @@ var	i, j,
         key	: word;
         p	: pchar;
         c	: byte;
-        cCol,
-        cRow	: PCOUNTER;
-
 begin
 	done	:= FALSE;
         x 	:= 0;
 	y	:= 0;
 	c	:= 1;
-
-        cCol := counterCreate(x+1, PANEL_X, PANEL_Y + 12, PANEL_W div 2 - 1, 0, PANEL_W2, SHADE_WHITE, 'X');
-        cRow := counterCreate(y+1, PANEL_X + PANEL_W2 + 1, PANEL_Y + 12, PANEL_W div 2 - 1, 0, PANEL_W2, SHADE_WHITE, 'Y');
-        gameInterface(UI_PLACE);
-        counterShow(cCol);
-        counterShow(cRow);
         repeat
-        	counterSetValue(cCol, x+1);
-                counterSetValue(cRow, y+1);
-
-                vsync;
-		render(GAME_COLONY);
-
-                { ensure the pattern will not be overdrawn on the panel }
+                { keep the pattern inside the colony }
                 while x + PATTERNS_LIST[c].w - 1 >= FIELD_W do dec(x);
                 while y + PATTERNS_LIST[c].h - 1 >= FIELD_H do dec(y);
 
+		fieldDraw(GAME_COLONY);
                	patternDraw(@PATTERNS_LIST[c], x, y);
+		lpanel(UI_PLACE, 'PATTERN ' + itoa(c), 0, x, y);
+		lores_flip;
                 key := getkey_single;
                 case key of
                 KEY_SHIFT_TAB:	if c > 1 then dec(c) else c := PATTERNS_MAX;
@@ -377,55 +336,33 @@ begin
                 KEY_DOWN:	if y <= FIELD_H - PATTERNS_LIST[c].h - 1 then inc(y);
                 end;
         until done;
-        counterDestroy(cCol);
-        counterDestroy(cRow);
 end;
 
 procedure	gameEdit;
-var	change,
-	quit	: boolean;
+var	quit	: boolean;
 	key	: word;
 	c, r	: integer;
-        cCol,
-        cRow	: PCOUNTER;
-
 begin
+	if not lores_init then
+	begin
+		info(SHADE_RED, 'THE EDITOR NEEDS AN EGA OR VGA CARD.');
+		exit;
+	end;
 	c    := FIELD_W shr 1;
 	r    := FIELD_H shr 1;
-        cCol := counterCreate(c+1, PANEL_X, PANEL_Y + 12, PANEL_W div 2 - 1, 0, PANEL_W2, SHADE_YELLOW, 'X');
-        cRow := counterCreate(r+1, PANEL_X + PANEL_W2 + 1, PANEL_Y + 12, PANEL_W div 2 - 1, 0, PANEL_W2, SHADE_YELLOW, 'Y');
-        counterReset(cGen);
-
-        gameInterface(UI_EDIT);
-        counterShow(cCol);
-        counterShow(cRow);
-
-	quit   := FALSE;
-        change := FALSE;
-	render(GAME_COLONY);
+	quit := FALSE;
 	repeat
-        	counterSetValue(cCol, c+1);
-                counterSetValue(cRow, r+1);
-        	if change then
-		begin
-                        gameInterface(UI_EDIT);
-                        counterShow(cCol);
-                        counterShow(cRow);
-			render(GAME_COLONY);
-			change := FALSE;
-                end;
+		fieldDraw(GAME_COLONY);
         	cellular(GAME_COLONY, c, r, TRUE);
+		lpanel(UI_EDIT, 'EDITING', 0, c, r);
+		lores_flip;
 		key := getkey_single;
-                cellular(GAME_COLONY, c, r, FALSE);
 		case key of
 		KEY_SPACE:      begin
 					toggle(GAME_COLONY, c, r);
 					snd_play(SFX_CLICK);
 				end;
-                KEY_P	 : 	begin
-					gamePlacePattern;
-                                        change := TRUE;
-                		end;
+                KEY_P	 : 	gamePlacePattern;
 		KEY_ESC	:       quit := TRUE;
                 KEY_CTRL_LEFT:  c := 0;
                 KEY_CTRL_RIGHT:	c := FIELD_W-1;
@@ -442,28 +379,23 @@ begin
 		KEY_C	: 	begin
 					empty(GAME_COLONY);
 					snd_play(SFX_FALL);
-                                        change := TRUE;
                 		end;
                 KEY_F	: 	begin
                 			fill(GAME_COLONY);
 					snd_play(SFX_BLIP);
-                                        change := TRUE;
                 		end;
                 KEY_I	:	begin
                 			invert(GAME_COLONY);
 					snd_play(SFX_BLIP);
-                                        change := TRUE;
                 		end;
                 KEY_R	: 	begin
 					init(GAME_COLONY);
 					snd_play(SFX_JUMP);
-                                        change := TRUE;
                 		end;
 		end;
 	until quit;
-
-        counterDestroy(cCol);
-        counterDestroy(cRow);
+	lores_done;
+        counterSetValue(cGen, 0);
 end;
 
 procedure	gameMenu;

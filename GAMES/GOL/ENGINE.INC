@@ -11,6 +11,7 @@ procedure	fill   (var ctx: COLONY);					forward;
 procedure	invert (var ctx: COLONY);					forward;
 procedure	init   (var ctx: COLONY);					forward;
 procedure	render (const ctx: COLONY);					forward;
+procedure	fieldDraw(const ctx: COLONY);					forward;
 function	create: COLONY;							forward;
 procedure	destroy(var ctx: COLONY);					forward;
 function	load   (var ctx: COLONY; src: string): boolean;			forward;
@@ -134,29 +135,57 @@ begin
 	else	cellColor := GAME_CONFIG.c_dead;
 end;
 
-{ one cell, a half-block pixel; the cursor shows in its own colors }
+{ one cell, a pixel of the 160 x 100 screen; the cursor is a cross }
+{ around it in its own colors                                      }
 procedure       cellular(const ctx: COLONY; x, y: integer; active: boolean);
 var	clr	: byte;
+	k	: integer;
 begin
 	clr := cellColor(ctx, x, y);
 	if active then
+	begin
 		if ctx^.field[cell(x, y)] = C_ALIVE then clr := CURSOR_ALIVE else clr := CURSOR_DEAD;
-	pixel_set((BOARD_X - 1) + x, (BOARD_Y - 1) * 2 + y, clr);
+		for k := 2 to 4 do
+		begin
+			if x - k >= 0 then lores_set(x - k, y, CURSOR_DEAD);
+			if x + k < FIELD_W then lores_set(x + k, y, CURSOR_DEAD);
+			if y - k >= 0 then lores_set(x, y - k, CURSOR_DEAD);
+			if y + k < FIELD_H then lores_set(x, y + k, CURSOR_DEAD);
+		end;
+	end;
+	lores_set(x, y, clr);
 end;
 
-{ the whole field, a text cell (two cells) at a time: the upper half }
-{ block in the color of the upper cell, on the color of the lower one }
+{ the whole colony on the 160 x 100 screen }
+procedure	fieldDraw(const ctx: COLONY);
+var	x, y	: integer;
+begin
+	if ctx = nil then exit;
+	for y := 0 to FIELD_H-1 do
+		for x := 0 to FIELD_W-1 do
+			lores_set(x, y, cellColor(ctx, x, y));
+end;
+
+{ the preview in the menu: a half-block pixel for 2 x 2 cells, alive }
+{ when two of them are                                               }
+function	blockColor(const ctx: COLONY; x, y: integer): byte;
+begin
+	if ctx^.field[cell(x * 2, y * 2)] + ctx^.field[cell(x * 2 + 1, y * 2)] +
+	   ctx^.field[cell(x * 2, y * 2 + 1)] + ctx^.field[cell(x * 2 + 1, y * 2 + 1)] >= 2 then
+		blockColor := GAME_CONFIG.c_alive
+	else	blockColor := GAME_CONFIG.c_dead;
+end;
+
 procedure	render(const ctx: COLONY);
 var	x, row	: integer;
 	top, bot: byte;
 begin
 	if ctx = nil then exit;
-
 	for row := 0 to BOARD_H-1 do
-	for x := 0 to FIELD_W-1 do
+	for x := 0 to BOARD_W-1 do
 	begin
-		top := cellColor(ctx, x, row * 2);
-		bot := cellColor(ctx, x, row * 2 + 1);
+		top := blockColor(ctx, x, row * 2);
+		bot := blockColor(ctx, x, row * 2 + 1);
 		if top = bot then
 			printc(BOARD_X + x, BOARD_Y + row, top, #219)
 		else	printc(BOARD_X + x, BOARD_Y + row, (bot shl 4) or top, #223);
@@ -174,8 +203,8 @@ begin
 		for i := 0 to blk^.w - 1 do
 		begin
 			if q^ <> #0 then
-				pixel_set((BOARD_X - 1) + x + i, (BOARD_Y - 1) * 2 + y + j, PATTERN_ON)
-			else	pixel_set((BOARD_X - 1) + x + i, (BOARD_Y - 1) * 2 + y + j, PATTERN_OFF);
+				lores_set(x + i, y + j, PATTERN_ON)
+			else	lores_set(x + i, y + j, PATTERN_OFF);
 			inc(q);
 		end;
 end;

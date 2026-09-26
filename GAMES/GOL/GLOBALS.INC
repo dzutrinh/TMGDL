@@ -4,12 +4,15 @@
 const	C_ALIVE	= 1;				{ denote an alive cell }
 	C_DEAD	= 0;				{ denote a dead cell   }
 
-        { field parameters: a cell is a half-block pixel, two in a text row }
-	FIELD_W	= SCR_HEIGHT * 2;		{ field width          }
-	FIELD_H	= SCR_HEIGHT * 2;		{ field height         }
+	{ the colony: 100 x 100 cells, a pixel each on the 160 x 100 screen }
+	{ while it runs or is edited; the menu shows it at half the size,  }
+	{ in half-block pixels                                             }
+	FIELD_W	= 100;				{ field width          }
+	FIELD_H	= 100;				{ field height         }
+	LPANEL_X= FIELD_W + 4;			{ the panel beside it  }
 
-	BOARD_W	= FIELD_W;			{ board dimensions, in }
-	BOARD_H	= FIELD_H div 2;		{ text cells           }
+	BOARD_W	= FIELD_W div 2;		{ the preview, in      }
+	BOARD_H	= FIELD_H div 4;		{ text cells           }
 	BOARD_X	= 1;				{ board coordinates    }
 	BOARD_Y	= 1;
 
@@ -57,15 +60,7 @@ const   FILE_CONFIG	: string[12] = 'GOL.CNF';
 	
         MENU_TEXT_CLR	: byte = $07;
         MENU_ACCENT_CLR	: byte = $2F;
-
-        MSG_RUN		: STATUS_MSG = 'SIMULATION     ';
-        MSG_EDIT	: STATUS_MSG = 'EDITING COLONY ';
         MSG_READY	: STATUS_MSG = 'READY          ';
-        MSG_PLACE	: STATUS_MSG = 'PLACING PATTERN';
-        MSG_RUN_AUTO	: STATUS_MSG = '~03AUTO     ';
-        MSG_RUN_PAUSED	: STATUS_MSG = '~0BPAUSED   ';
-        MSG_RUN_STEPPING: STATUS_MSG = '~0DSTEPPING ';
-        MSG_RUN_RANDOM	: STATUS_MSG = '~05RANDOMIZE';
 
         MAP_SIGNATURE	: MAP_MAGIC = 'GMF';
 
@@ -97,8 +92,7 @@ const   FILE_CONFIG	: string[12] = 'GOL.CNF';
 		 c_dead	: 1;
 		 sound	: TRUE);
 
-var 	vscreen		: SCREEN;		{ double-buffering   }
-	GAME_COLONY	: COLONY;		{ our game colony    }
+var 	GAME_COLONY	: COLONY;		{ our game colony    }
 	GAME_CONFIG	: APP_CONFIG;
 
 {$endif}

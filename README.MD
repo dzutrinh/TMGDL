@@ -331,7 +331,7 @@ Folder: [`GAMES/DUNGEON`](./GAMES/DUNGEON)
 
 ### Game of Life
 
-Conway's cellular automaton: cells are born and die by the number of their neighbours. The field has 50 x 50 cells, drawn as half-block pixels, two to a text cell. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
+Conway's cellular automaton: cells are born and die by the number of their neighbours. The field has 100 x 100 cells, a pixel each in the [160 x 100 mode](#low-res-160-x-100-mode) while it runs or is edited; the menu shows it at half the size in half-block pixels. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
 
 Keys: `SPACE` step/auto, `ENTER` next generation, `LEFT`/`RIGHT` speed, `P` pause, `R` random colony, `ESC` back. In the editor: arrows or `W` `A` `S` `D` move, `SPACE` toggles a cell, `P` places a pattern (`TAB` picks it, `ENTER` drops it), `C` clears, `F` fills.
 
@@ -631,13 +631,11 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
-- Game of Life, Arkanoid, Snake, Sokoban and Runner draw their fields in
-  half-block pixels, for four times as many cells (Life, Snake), twice the
-  height (Arkanoid), pictured tiles with sliding crates (Sokoban), or a field
-  half as tall again with drawn ladders and runners (Runner).
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
-  3 x 5 font; Chomp plays in it, in the style of Paku Paku, and so does
-  Centipede.
+  3 x 5 font, shapes, a question box, and a way back to text for dialogs.
+  Arkanoid, Centipede, Chomp (in the style of Paku Paku), Game of Life
+  (100 x 100 cells), Invaders, Lander, Runner, Snake, Sokoban and Tetris play
+  in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
