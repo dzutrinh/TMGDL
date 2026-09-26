@@ -415,7 +415,7 @@ Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
 
 ### Runner
 
-A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board. Every tile is 2 x 3 half-block pixels, so the field fills the height of the screen, with ladder rungs, holes that fill up from below, and runners that glide from tile to tile.
+A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board. It plays in the [160 x 100 mode](#low-res-160-x-100-mode): every tile is 4 x 6 pixels, so the field fills the height of the screen, with mortared bricks, ladders with rails and rungs, holes that fill up from below, and little runners with swinging legs that glide from tile to tile; the scores and the lives are on a panel at the right.
 
 Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
 
