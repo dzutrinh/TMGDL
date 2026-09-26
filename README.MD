@@ -394,7 +394,7 @@ Folder: [`GAMES/LANDER`](./GAMES/LANDER)
 
 ### Minesweeper
 
-Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The five best times of each level are kept, with the players' names.
+Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The five best times of each level are kept, with the players' names. The field is drawn in the 160 x 100 mode, with raised tiles as big as the field allows.
 
 Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` open, `F` flag, `N` new game, `H` help, `?` about, `ESC` quit.
 
@@ -650,8 +650,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Gomoku, Invaders, Lander, Pipes, Reversi, Runner,
-  Snake, Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
+  Life (100 x 100 cells), Gomoku, Invaders, Lander, Minesweeper, Pipes,
+  Reversi, Runner, Snake, Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
