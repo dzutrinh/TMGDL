@@ -24,7 +24,10 @@ Supported compilers:
 | [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
+| [Invaders](#invaders) | 1.0 | Space Invaders in half-block pixels, with shields and a saucer |
+| [Lander](#lander) | 1.0 | Lunar Lander in half-block pixels: land softly on a pad |
 | [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
+| [Pipes](#pipes) | 1.0 | Pipe Mania-style: lay a pipeline before the water comes |
 | [Reversi](#reversi) | 1.0 | Othello-style disc flipping against a friend or the computer |
 | [Runner](#runner) | 1.0 | Lode Runner-style platforms: dig, climb and grab the gold |
 | [Snake](#snake) | 1.0 | Eat apples, grow longer, dodge the obstacles |
@@ -48,6 +51,7 @@ its menu (in 2048, with `M`).
 | [SCANCODE](#scancode-key-code-viewer) | - | Shows the codes of the keys pressed |
 | [VIEWBIN](#viewbin-screen-dump-viewer) | - | Shows a screen dump saved with F12 |
 | [DEMO](#demo-pixels-and-sound) | - | Half-block pixel scenes with PC-speaker music |
+| [MUSICBOX](#musicbox-tune-editor) | 1.0 | Play, write and save tunes for `snd_play` |
 
 ## Library
 
@@ -149,6 +153,8 @@ Ready-made effects: `SFX_CLICK`, `SFX_BLIP`, `SFX_COIN`, `SFX_HIT`,
 `SFX_JUMP`, `SFX_FALL`, `SFX_BOOM`, `SFX_DIE`, `SFX_LEVEL`, `SFX_WIN` and
 `SFX_ERROR`. `SND_ENABLED := FALSE` turns all sound off (the games keep it as
 an option), and the speaker is always silenced when the program ends.
+[MUSICBOX](#musicbox-tune-editor) writes tunes and saves them as Pascal
+constants ready for `snd_play`.
 
 ```pascal
 uses libtext, libsnd;
@@ -182,8 +188,8 @@ hiscoreSave('GAME.HI', scores);
 ```
 
 Every game with a leader board uses it: 2048, Arkanoid, Chomp, Dungeon,
-Minesweeper (the best times of each level), Runner, Snake, Solitaire and
-Tetris.
+Invaders, Lander, Minesweeper (the best times of each level), Pipes, Runner,
+Snake, Solitaire and Tetris.
 
 ## Building
 
@@ -212,7 +218,7 @@ make -DUSE_FPC install
 ```
 
 Every game folder under `GAMES` has a makefile, as do `TOOLS` (ASCII, SCANCODE, VIEWBIN, DEMO),
-`TOOLS\PCKMGR` (PM, PCK, SFX) and `TOOLS\INSTALL`. Programs built with Free
+`TOOLS\PCKMGR` (PM, PCK, SFX), `TOOLS\INSTALL` and `TOOLS\MUSICBOX`. Programs built with Free
 Pascal need `CWSDPMI.EXE` (in `%FPCROOT%\BIN\GO32V2`) in the same folder or on
 the `PATH`.
 
@@ -221,9 +227,10 @@ the `PATH`.
 compiler's unit path: a mix of old and new units causes "unit version mismatch"
 (TPC) or "can't compile unit" (FPC) errors.
 
-The executables stored in some game folders come from earlier releases;
-rebuild them to get the versions listed here. Arkanoid, Chomp, Gomoku, Snake
-and Sokoban ship as source only: run `BUILD` in their folders.
+The executables stored in the 2048, Game of Life, Tetris and Tic-Tac-Toe
+folders come from earlier releases; rebuild them to get the versions listed
+here. The other games and the tools ship as source only: run `BUILD` in their
+folders.
 
 ## Games in detail
 
@@ -301,6 +308,30 @@ Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
 
 ![](./GAMES/GOMOKU/SCREEN02.GIF)
 
+### Invaders
+
+Rows of invaders march across the sky and step down each time they reach a side; the fewer are left, the faster they go. Shoot them all before they land, hiding under four shields that crumble under every shot and bomb. A mystery saucer flies by now and then, and every wave starts a little lower. Drawn in 80 x 50 half-block pixels, with the classic four-note march on the PC speaker.
+
+Keys: arrows or `A` `D` move (held keys glide), `SPACE`/`Up` fire, `P` pause, `H` help, `ESC` quit.
+
+Folder: [`GAMES/INVADERS`](./GAMES/INVADERS)
+
+![](./GAMES/INVADERS/SCREEN01.GIF)
+
+![](./GAMES/INVADERS/SCREEN02.GIF)
+
+### Lander
+
+Bring the lander down gently on one of three flat pads, before the fuel runs out. Gravity pulls all the time; the main engine and two side jets fight it. The smaller the pad, the more it scores (x2, x3, x5), and a perfect touchdown and fuel left over earn a bonus. Every level has new mountains, stronger gravity and less fuel. The ground is drawn once per level in 80 x 50 half-block pixels and the ship flies over it; the engine rumbles on the PC speaker.
+
+Keys: `Up`/`W`/`SPACE` main engine, `Left`/`A` and `Right`/`D` side jets (hold them, or tap for a short push), `P` pause, `H` help, `ESC` quit.
+
+Folder: [`GAMES/LANDER`](./GAMES/LANDER)
+
+![](./GAMES/LANDER/SCREEN01.GIF)
+
+![](./GAMES/LANDER/SCREEN02.GIF)
+
 ### Minesweeper
 
 Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The five best times of each level are kept, with the players' names.
@@ -312,6 +343,18 @@ Folder: [`GAMES/MINES`](./GAMES/MINES)
 ![](./GAMES/MINES/SCREEN01.GIF)
 
 ![](./GAMES/MINES/SCREEN02.GIF)
+
+### Pipes
+
+Water will soon pour from the tap: lay a pipeline for it with the pieces of the dispenser, straights, corners and crosses, before the clock runs out. The water then runs through every pipe that fits, and the level counts when it has filled enough of them before it spills. Crosses can be filled both ways for a bonus, dry pipes can be replaced at a cost, and `F` lets the water go at once for double points. More rocks, less time and faster water on every level; three tries.
+
+Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` lay a piece, `F` water now, `P` pause, `H` help, `ESC` quit.
+
+Folder: [`GAMES/PIPES`](./GAMES/PIPES)
+
+![](./GAMES/PIPES/SCREEN01.GIF)
+
+![](./GAMES/PIPES/SCREEN02.GIF)
 
 ### Reversi
 
@@ -509,6 +552,16 @@ Folder: [`TOOLS`](./TOOLS)
 
 ![](./TOOLS/DEMO.GIF)
 
+### MUSICBOX (tune editor)
+
+Plays the PC keyboard like a two-octave piano, as in a tracker (`Z` `S` `X` `D` `C`... and `Q` `2` `W` `3` `E`...), and records the notes into a tune: set lengths, dots and rests, change the pitch of a note, move around and delete. `ENTER` plays the tune with the notes lit on the piano. The tune is shown in the music language of `LIBSND`, and saved as `.MUS` text files (`MUSICBOX TUNE.MUS` opens one) or as a Pascal include file of string constants for `snd_play`, split in parts of 250 characters when it is long. Five example tunes, tempo and style (normal, legato, staccato).
+
+Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
+
+![](./TOOLS/MUSICBOX/SCREEN01.GIF)
+
+![](./TOOLS/MUSICBOX/SCREEN02.GIF)
+
 ## What's new in 1.5
 
 - Screen output is clipped to the screen, and dialogs, boxes and menus fit on
@@ -523,8 +576,8 @@ Folder: [`TOOLS`](./TOOLS)
   names, paths, drives, choices, switches, passwords) checked as they are left.
 - `package_read` reads a file of a package into memory; the log view shows
   `~XY` color codes.
-- Ten new games: Arkanoid, Chomp, Dungeon, Gomoku, Minesweeper, Reversi, Runner,
-  Snake, Sokoban and Solitaire.
+- Thirteen new games: Arkanoid, Chomp, Dungeon, Gomoku, Invaders, Lander,
+  Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and Solitaire.
 - Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
   lines, rectangles and circles.
 - `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
@@ -533,7 +586,8 @@ Folder: [`TOOLS`](./TOOLS)
 - High-score tables in `LIBCTLS`, shared by all the games instead of each
   keeping its own; the scores are kept in `.HI` files. The scores of older
   versions, and the settings of some games, are reset once.
-- DEMO, a tool that shows the pixels and the music.
+- DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
+  that writes music for `snd_play`.
 
 ## Known issues
 
