@@ -432,6 +432,7 @@ procedure	pixel_disc  (cx, cy, r: integer; color: byte);
 
 const	LORES_W		= 160;
 	LORES_H		= 100;
+	LORES_BYTES	= 16000;	{ a copy of the canvas: lores_store }
 
 function	lores_init : boolean;		{ FALSE: no EGA/VGA or memory }
 procedure	lores_done;			{ back to 80 x 25 text        }
@@ -449,6 +450,8 @@ procedure	lores_disc (cx, cy, r: integer; color: byte);
 procedure	lores_suspend;			{ text mode, the canvas kept  }
 procedure	lores_resume;
 function	lores_ask  (text, keys: string): char;	{ a box, one of the keys }
+procedure	lores_store  (var buf);		{ the canvas to LORES_BYTES   }
+procedure	lores_restore(var buf);		{ ... and back, as it was     }
 
 { //////////////////////////// DIALOG BOX API ////////////////////////////// }
 
@@ -2038,6 +2041,16 @@ begin
 {$else}
 	dosmemput(VSEG_ADDR, 0, LORES_BUF^, LORES_SIZE);
 {$endif}
+end;
+
+procedure	lores_store(var buf);
+begin
+	if LORES_BUF <> nil then move(LORES_BUF^, buf, LORES_SIZE);
+end;
+
+procedure	lores_restore(var buf);
+begin
+	if LORES_BUF <> nil then move(buf, LORES_BUF^, LORES_SIZE);
 end;
 
 procedure	lores_resume;

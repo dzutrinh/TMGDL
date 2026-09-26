@@ -26,7 +26,7 @@ Supported compilers:
 | [Game of Life](#game-of-life) | 1.1 | Conway's cellular automaton, with an editor |
 | [Gomoku](#gomoku) | 1.0 | Five in a row against a friend or the computer |
 | [Invaders](#invaders) | 1.0 | Space Invaders in 160 x 100, with shields and a saucer |
-| [Lander](#lander) | 1.0 | Lunar Lander in half-block pixels: land softly on a pad |
+| [Lander](#lander) | 1.0 | Lunar Lander in 160 x 100: land softly on a pad |
 | [Minesweeper](#minesweeper) | 1.0 | Clear the field without setting off a mine |
 | [Pipes](#pipes) | 1.0 | Pipe Mania-style: lay a pipeline before the water comes |
 | [Reversi](#reversi) | 1.0 | Othello-style disc flipping against a friend or the computer |
@@ -158,6 +158,8 @@ lores_line(0, 99, 159, 60, 10);
 lores_flip;
 if lores_ask('QUIT? Y/N', 'YN') = 'Y' then ...
 lores_suspend; gameHelp; lores_resume;  { a text dialog in between }
+lores_store(saved^);                    { LORES_BYTES: a drawn background }
+lores_restore(saved^);                  { ... back at every frame         }
 ...
 lores_done;
 ```
@@ -365,7 +367,7 @@ Folder: [`GAMES/INVADERS`](./GAMES/INVADERS)
 
 ### Lander
 
-Bring the lander down gently on one of three flat pads, before the fuel runs out. Gravity pulls all the time; the main engine and two side jets fight it. The smaller the pad, the more it scores (x2, x3, x5), and a perfect touchdown and fuel left over earn a bonus. Every level has new mountains, stronger gravity and less fuel. The ground is drawn once per level in 80 x 50 half-block pixels and the ship flies over it; the engine rumbles on the PC speaker.
+Bring the lander down gently on one of three flat pads, before the fuel runs out. Gravity pulls all the time; the main engine and two side jets fight it. The smaller the pad, the more it scores (x2, x3, x5), and a perfect touchdown and fuel left over earn a bonus. Every level has new mountains, stronger gravity and less fuel. The ground is drawn once per level in the [160 x 100 mode](#low-res-160-x-100-mode) and the ship flies over it; the engine rumbles on the PC speaker.
 
 Keys: `Up`/`W`/`SPACE` main engine, `Left`/`A` and `Right`/`D` side jets (hold them, or tap for a short push), `P` pause, `H` help, `ESC` quit.
 
