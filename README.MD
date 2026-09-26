@@ -19,22 +19,7 @@ Supported compilers:
 | Game | Version | What it is |
 | --- | --- | --- |
 | [2048](#2048) | 1.5 | Slide and merge tiles to reach 2048 |
-| [Arkanoid](#arkanoid) | 1.1 | Brick breaker with power-up capsules |
-| [Centipede](#centipede) | 1.0 | Shoot the centipede winding through the mushrooms, in 160 x 100 |
-| [Chomp](#chomp) | 1.1 | Maze game in 160 x 100 colours, in the style of Paku Paku |
-| [Dig Dug](#dig-dug) | 1.0 | Dig tunnels, pump the monsters, drop rocks on them, in 160 x 100 |
-| [Dungeon](#dungeon) | 1.0 | Roguelike: ten depths, monsters, items and an amulet to find |
 | [Game of Life](#game-of-life) | 1.2 | Conway's cellular automaton, with an editor |
-| [Gomoku](#gomoku) | 1.1 | Five in a row against a friend or the computer |
-| [Invaders](#invaders) | 1.1 | Space Invaders in 160 x 100, with shields and a saucer |
-| [Lander](#lander) | 1.1 | Lunar Lander in 160 x 100: land softly on a pad |
-| [Minesweeper](#minesweeper) | 1.1 | Clear the field without setting off a mine |
-| [Pipes](#pipes) | 1.1 | Pipe Mania-style: lay a pipeline before the water comes |
-| [Reversi](#reversi) | 1.1 | Othello-style disc flipping against a friend or the computer |
-| [Runner](#runner) | 1.1 | Lode Runner-style platforms: dig, climb and grab the gold |
-| [Snake](#snake) | 1.1 | Eat apples, grow longer, dodge the obstacles |
-| [Sokoban](#sokoban) | 1.1 | Push the crates onto the goals, 12 levels |
-| [Solitaire](#solitaire) | 1.1 | Klondike patience, drawing one or three cards |
 | [Tetris](#tetris) | 1.2 | The falling-blocks classic |
 | [Tic-Tac-Toe](#tic-tac-toe) | 1.3 | Noughts and crosses against a friend or the computer |
 
@@ -223,9 +208,7 @@ hiscoreView(scores, 'HALL OF FAME', SHADE_BLUE, rank);
 hiscoreSave('GAME.HI', scores);
 ```
 
-Every game with a leader board uses it: 2048, Arkanoid, Centipede, Chomp, Dig Dug, Dungeon,
-Invaders, Lander, Minesweeper (the best times of each level), Pipes, Runner,
-Snake, Solitaire and Tetris.
+Every game with a leader board uses it: 2048 and Tetris.
 
 ## Building
 
@@ -282,68 +265,6 @@ Folder: [`GAMES/2048`](./GAMES/2048)
 
 ![](./GAMES/2048/SCREEN02.GIF)
 
-### Arkanoid
-
-Bounce the ball off the Vaus to break every brick of the round. Silver bricks take several hits and gold ones never break. Capsules from broken bricks expand the Vaus, catch the ball, slow it down, give an extra life or skip to the next level. Eight levels that come back faster, leader board, five ball speeds. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), like the arcade: a metal frame, bricks of 6 x 3 pixels with their shadows, a silver Vaus, and the score, the round and the power-ups on a panel at the right.
-
-Keys: arrows or `A` `D` move (held keys glide), `W`/`SPACE` launch, `P` pause, `ESC` quit.
-
-Folder: [`GAMES/ARKANOID`](./GAMES/ARKANOID)
-
-![](./GAMES/ARKANOID/SCREEN01.GIF)
-
-![](./GAMES/ARKANOID/SCREEN02.GIF)
-
-### Centipede
-
-A centipede winds down through a field of mushrooms, running sideways until it meets a mushroom or the side, then dropping a row and turning. Every segment shot becomes a mushroom and breaks the centipede in two, each part with its own head; down in the player's rows new heads come in at the sides. A spider bounces through the bottom rows eating mushrooms, fleas drop down planting new ones, and scorpions poison the mushrooms they touch, sending the centipede diving. Waves get faster and change colours; mushrooms grow back after a life is lost. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), with a leader board.
-
-Keys: arrows or `W` `A` `S` `D` move, `SPACE` fires (hold it down), `P` pause, `ESC` quit.
-
-Folder: [`GAMES/CENTIPED`](./GAMES/CENTIPED)
-
-![](./GAMES/CENTIPED/SCREEN01.GIF)
-
-![](./GAMES/CENTIPED/SCREEN02.GIF)
-
-### Chomp
-
-A maze game in the style of the arcade dot-eaters, with an original maze. Eat every dot while four ghosts hunt you, each its own way: straight at you, ahead of you, from the side, or keeping its distance. Power dots turn them blue so you can eat them. Fruit, a tunnel, faster levels, three skill levels and a leader board. Like Paku Paku, the DOS dot-eater of 2011, it plays in the [160 x 100 mode](#low-res-160-x-100-mode) of an EGA/VGA text screen: an arcade-shaped 28 x 31 maze with thin double walls, 5 x 5 sprites that move smoothly (a chomping mouth, ghosts whose eyes look where they go, blue ghosts with faces, eyes flying home), the score above the maze and the lives and fruit beside it, waka-waka on the PC speaker.
-
-Keys: arrows or `W` `A` `S` `D` move (turns can be pressed early), `P` pause, `ESC` quit.
-
-Folder: [`GAMES/CHOMP`](./GAMES/CHOMP)
-
-![](./GAMES/CHOMP/SCREEN01.GIF)
-
-![](./GAMES/CHOMP/SCREEN02.GIF)
-
-### Dig Dug
-
-Dig your own tunnels through four layers of earth to get at the monsters hiding in it. Pookas and fire-breathing Fygars walk the tunnels towards you, and now and then float straight through the earth as a pair of eyes. Harpoon one and keep pumping: four pumps and it pops, worth more the deeper it is (and twice as much for a Fygar pumped from the side). Dig under a rock and it falls, crushing whatever is below for a big bonus; after two rocks a vegetable shows up. The last monster of a round runs away. It plays in the [160 x 100 mode](#low-res-160-x-100-mode), with a leader board.
-
-Keys: arrows or `W` `A` `S` `D` walk and dig, `SPACE` harpoon and pump (hold it down to keep pumping), `P` pause, `H` help, `ESC` quit.
-
-Folder: [`GAMES/DIGDUG`](./GAMES/DIGDUG)
-
-![](./GAMES/DIGDUG/SCREEN01.GIF)
-
-![](./GAMES/DIGDUG/SCREEN02.GIF)
-
-### Dungeon
-
-A roguelike in the tradition of Rogue: go down ten depths of rooms and corridors, made anew for every game, and take the Amulet of Yendoria from the red dragon that keeps it. Create a warrior, rogue or mage in a form (with hard mode and a dungeon seed: the same seed makes the same dungeon), fight 15 kinds of monsters turn by turn, and find potions, scrolls, weapons and armor. Rooms are lit, corridors dark, and what was seen is remembered. Save and continue later, but death is for good: a tombstone and the hall of fame are all that remain.
-
-It uses much of the library: the monster and item tables are text files in the `DUNGEON.PCK` package, read with `package_read`; HP and XP are gauges; the pack is a list view; messages go to a colored log view, with the history in a list view; the hero is made in a form.
-
-Keys: arrows, `Home` `End` `PgUp` `PgDn` or the keypad digits move and attack, `SPACE` wait, `G` pick up, `I` pack, `>` go down, `R` rest, `M` messages, `C` hero, `H` help, `S`/`ESC` save and leave.
-
-Folder: [`GAMES/DUNGEON`](./GAMES/DUNGEON)
-
-![](./GAMES/DUNGEON/SCREEN01.GIF)
-
-![](./GAMES/DUNGEON/SCREEN02.GIF)
-
 ### Game of Life
 
 Conway's cellular automaton: cells are born and die by the number of their neighbours. The field has 100 x 100 cells, a pixel each in the [160 x 100 mode](#low-res-160-x-100-mode) while it runs or is edited; the menu shows it at half the size in half-block pixels. Step through the generations or let them run at the speed you choose, and draw your own colony in the editor or start from one of the built-in patterns.
@@ -355,126 +276,6 @@ Folder: [`GAMES/GOL`](./GAMES/GOL)
 ![](./GAMES/GOL/SCREEN01.GIF)
 
 ![](./GAMES/GOL/SCREEN02.GIF)
-
-### Gomoku
-
-Five in a row on a 15 x 15 wooden board, drawn in the 160 x 100 mode with a line through the winning stones. Two players, or one against the computer at the easy, medium or hard level; play black, white, or alternate between games. Take back moves, and optionally only an exact five wins.
-
-Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `H` help, `?` about, `ESC` quit.
-
-Folder: [`GAMES/GOMOKU`](./GAMES/GOMOKU)
-
-![](./GAMES/GOMOKU/SCREEN01.GIF)
-
-![](./GAMES/GOMOKU/SCREEN02.GIF)
-
-### Invaders
-
-Rows of invaders march across the sky and step down each time they reach a side; the fewer are left, the faster they go. Shoot them all before they land, hiding under four shields that crumble under every shot and bomb. A mystery saucer flies by now and then, and every wave starts a little lower. Drawn in the [160 x 100 mode](#low-res-160-x-100-mode), with the classic four-note march on the PC speaker.
-
-Keys: arrows or `A` `D` move (held keys glide), `SPACE`/`Up` fire, `P` pause, `H` help, `ESC` quit.
-
-Folder: [`GAMES/INVADERS`](./GAMES/INVADERS)
-
-![](./GAMES/INVADERS/SCREEN01.GIF)
-
-![](./GAMES/INVADERS/SCREEN02.GIF)
-
-### Lander
-
-Bring the lander down gently on one of three flat pads, before the fuel runs out. Gravity pulls all the time; the main engine and two side jets fight it. The smaller the pad, the more it scores (x2, x3, x5), and a perfect touchdown and fuel left over earn a bonus. Every level has new mountains, stronger gravity and less fuel. The ground is drawn once per level in the [160 x 100 mode](#low-res-160-x-100-mode) and the ship flies over it; the engine rumbles on the PC speaker.
-
-Keys: `Up`/`W`/`SPACE` main engine, `Left`/`A` and `Right`/`D` side jets (hold them, or tap for a short push), `P` pause, `H` help, `ESC` quit.
-
-Folder: [`GAMES/LANDER`](./GAMES/LANDER)
-
-![](./GAMES/LANDER/SCREEN01.GIF)
-
-![](./GAMES/LANDER/SCREEN02.GIF)
-
-### Minesweeper
-
-Clear a field of hidden mines: every open tile tells how many of its neighbours hide one. Beginner, intermediate and expert fields, or a custom field up to 30 x 16 entered in a form. The first tile opened is never a mine, flags (and optional question marks) mark the mines, and opening a number with all its mines flagged opens its neighbours at once. The five best times of each level are kept, with the players' names. The field is drawn in the 160 x 100 mode, with raised tiles as big as the field allows.
-
-Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` open, `F` flag, `N` new game, `H` help, `?` about, `ESC` quit.
-
-Folder: [`GAMES/MINES`](./GAMES/MINES)
-
-![](./GAMES/MINES/SCREEN01.GIF)
-
-![](./GAMES/MINES/SCREEN02.GIF)
-
-### Pipes
-
-Water will soon pour from the tap: lay a pipeline for it with the pieces of the dispenser, straights, corners and crosses, before the clock runs out. The water then runs through every pipe that fits, and the level counts when it has filled enough of them before it spills. Crosses can be filled both ways for a bonus, dry pipes can be replaced at a cost, and `F` lets the water go at once for double points. More rocks, less time and faster water on every level; three tries. The pipes are drawn in the 160 x 100 mode, and the water runs through them a pixel at a time.
-
-Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` lay a piece, `F` water now, `P` pause, `H` help, `ESC` quit.
-
-Folder: [`GAMES/PIPES`](./GAMES/PIPES)
-
-![](./GAMES/PIPES/SCREEN01.GIF)
-
-![](./GAMES/PIPES/SCREEN02.GIF)
-
-### Reversi
-
-Reversi (Othello) on a green 8 x 8 board, drawn in the 160 x 100 mode: enclose the other player's discs to turn them over, and have the most discs when neither side can move. Two players, or one against the computer: easy, medium, or hard, which searches several moves ahead and plays the last eight perfectly. Legal moves can be shown, turned discs flip over edge-on, and moves can be taken back.
-
-Keys: arrows or `W` `A` `S` `D` move, `SPACE`/`ENTER` play, `U` undo, `M` show moves, `H` help, `?` about, `ESC` quit.
-
-Folder: [`GAMES/REVERSI`](./GAMES/REVERSI)
-
-![](./GAMES/REVERSI/SCREEN01.GIF)
-
-![](./GAMES/REVERSI/SCREEN02.GIF)
-
-### Runner
-
-A platform game in the style of Lode Runner, with 10 original levels. Take every bar of gold, then climb out at the top on the ladders that show up. Run, climb, go hand over hand along ropes, and dig holes in the brick floor: guards that fall in are stuck for a moment, and holes fill up again after a few seconds, burying whoever is inside. The guards find their way to you, carry gold off and drop it somewhere else. Leader board. It plays in the [160 x 100 mode](#low-res-160-x-100-mode): every tile is 4 x 6 pixels, so the field fills the height of the screen, with mortared bricks, ladders with rails and rungs, holes that fill up from below, and little runners with swinging legs that glide from tile to tile; the scores and the lives are on a panel at the right.
-
-Keys: arrows or `W` `A` `S` `D` run and climb, `Z`/`X` dig left/right, `P` pause, `R` restart the level (costs a life), `H` help, `ESC` quit.
-
-Folder: [`GAMES/RUNNER`](./GAMES/RUNNER)
-
-![](./GAMES/RUNNER/SCREEN01.GIF)
-
-![](./GAMES/RUNNER/SCREEN02.GIF)
-
-### Snake
-
-Steer the snake to the apples; each one makes it longer. Gems show up for a few seconds and are worth more the sooner they are eaten. Eight levels with their own obstacles, three lives, five speeds, an option to go through the edges, and a leader board. The field is 56 x 46 cells of 2 x 2 pixels in the [160 x 100 mode](#low-res-160-x-100-mode), four times as many as a text grid would hold, with the scores on a panel at the right.
-
-Keys: arrows or `W` `A` `S` `D` turn, `P` pause, `ESC` quit.
-
-Folder: [`GAMES/SNAKE`](./GAMES/SNAKE)
-
-![](./GAMES/SNAKE/SCREEN01.GIF)
-
-![](./GAMES/SNAKE/SCREEN02.GIF)
-
-### Sokoban
-
-Push every crate onto a goal; crates can't be pulled. Twelve original levels, from 5 to 33 pushes, each checked solvable by a solver; a level unlocks when the one before is solved. Unlimited undo and the fewest moves and pushes kept for every level. It plays in the [160 x 100 mode](#low-res-160-x-100-mode): every tile is an 8 x 8 picture (bricks, braced crates, goal rings, a keeper with a face), and the keeper and the crates slide from tile to tile.
-
-Keys: arrows or `W` `A` `S` `D` walk and push, `U` undo, `R` restart, `N`/`B` next/previous level, `ESC` pause menu (continue, restart level, quit to main menu).
-
-Folder: [`GAMES/SOKOBAN`](./GAMES/SOKOBAN)
-
-![](./GAMES/SOKOBAN/SCREEN01.GIF)
-
-![](./GAMES/SOKOBAN/SCREEN02.GIF)
-
-### Solitaire
-
-Klondike patience with pixel cards in the 160 x 100 mode: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, high scores, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
-
-Keys: arrows move, `UP` in a pile takes more cards, `SPACE` pick up/put down, `ENTER` best place, `D` draw, `A` all possible cards up, `U` undo, `N` new deal, `H` help, `ESC` menu.
-
-Folder: [`GAMES/SOLITAIR`](./GAMES/SOLITAIR)
-
-![](./GAMES/SOLITAIR/SCREEN01.GIF)
-
-![](./GAMES/SOLITAIR/SCREEN02.GIF)
 
 ### Tetris
 
@@ -636,9 +437,6 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   names, paths, drives, choices, switches, passwords) checked as they are left.
 - `package_read` reads a file of a package into memory; the log view shows
   `~XY` color codes.
-- Fifteen new games: Arkanoid, Centipede, Chomp, Dig Dug, Dungeon, Gomoku,
-  Invaders, Lander, Minesweeper, Pipes, Reversi, Runner, Snake, Sokoban and
-  Solitaire.
 - Half-block pixel graphics in `LIBTEXT`: 80 x 50 pixels in 16 colours, with
   lines, rectangles and circles.
 - `LIBSND`, a new unit for the PC speaker: tones, sound effects and music in
@@ -649,10 +447,7 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   versions, and the settings of some games, are reset once.
 - A 160 x 100 mode in `LIBTEXT` (the CGA text-mode trick, on EGA/VGA), with a
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
-  Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
-  Life (100 x 100 cells), Gomoku, Invaders, Lander, Minesweeper, Pipes,
-  Reversi, Runner, Snake, Sokoban, Solitaire, Tetris, Tic-Tac-Toe and 2048
-  play in it.
+  Game of Life (100 x 100 cells), Tetris, Tic-Tac-Toe and 2048 play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
