@@ -466,7 +466,7 @@ Folder: [`GAMES/SOKOBAN`](./GAMES/SOKOBAN)
 
 ### Solitaire
 
-Klondike patience with 7 x 4 text-mode cards: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, high scores, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
+Klondike patience with pixel cards in the 160 x 100 mode: build the four foundations from ace to king by suit, moving cards down the seven piles in alternating colors. Draw one or three cards, standard scoring, a clock, statistics, high scores, and the bouncing cards of a won game. All from the keyboard: pick up and put down cards, take several cards of a pile at once, or send a card to its best place with one key.
 
 Keys: arrows move, `UP` in a pile takes more cards, `SPACE` pick up/put down, `ENTER` best place, `D` draw, `A` all possible cards up, `U` undo, `N` new deal, `H` help, `ESC` menu.
 
@@ -651,7 +651,8 @@ Folder: [`TOOLS/MUSICBOX`](./TOOLS/MUSICBOX)
   3 x 5 font, shapes, a question box, and a way back to text for dialogs.
   Arkanoid, Centipede, Chomp (in the style of Paku Paku), Dig Dug, Game of
   Life (100 x 100 cells), Gomoku, Invaders, Lander, Minesweeper, Pipes,
-  Reversi, Runner, Snake, Sokoban, Tetris, Tic-Tac-Toe and 2048 play in it.
+  Reversi, Runner, Snake, Sokoban, Solitaire, Tetris, Tic-Tac-Toe and 2048
+  play in it.
 - DEMO, a tool that shows the pixels and the music, and MUSICBOX, a tune editor
   that writes music for `snd_play`.
 - `getkey_single` reads a key and drops the auto-repeat copies of it waiting in
