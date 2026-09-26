@@ -147,7 +147,8 @@ once. The text API does not work in this mode: `lores_ask` asks a question in a 
 on the canvas, and for the text dialogs (help, sliders) `lores_suspend` goes
 back to 80 x 25 text for a while, keeping the canvas, and `lores_resume` brings
 it back. `lores_done` ends the mode. There are lines, rectangles, bars and
-discs, and a 3 x 5 font writes letters, digits and signs.
+discs, and a 3 x 5 font writes letters, digits and signs, also scaled up
+(`lores_text_big`).
 
 ```pascal
 if not lores_init then die(-1, 'EGA/VGA adapter is required.');
@@ -155,6 +156,7 @@ lores_clear(0);
 lores_bar(10, 10, 20, 5, 12);
 lores_set(80, 50, 15);
 lores_text(2, 2, 'SCORE 1200', 14);     { 4 pixels a character }
+lores_text_big(2, 9, '2048', 15, 2, 2); { twice as wide and high }
 lores_line(0, 99, 159, 60, 10);
 lores_flip;
 if lores_ask('QUIT? Y/N', 'YN') = 'Y' then ...
@@ -270,9 +272,9 @@ folders.
 
 ### 2048
 
-Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. Tiles slide with an animation, the game is saved on exit and resumed next time, and the eight best scores are kept.
+Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. The board is drawn in the 160 x 100 mode: colored tiles slide a pixel at a time, merged tiles pop and new ones grow; the game is saved on exit and resumed next time, and the eight best scores are kept.
 
-Keys: `W` `A` `S` `D` slide, `R` new game, `H` high scores, `M` sound on/off, `?` help, `!` about, `ESC` quit.
+Keys: `W` `A` `S` `D` or arrows slide, `R` new game, `H` high scores, `M` sound on/off, `?` help, `!` about, `ESC` quit.
 
 Folder: [`GAMES/2048`](./GAMES/2048)
 

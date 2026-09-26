@@ -156,6 +156,96 @@ begin
 	gameDemo := (ch = KEY_ENTER) or (ch = KEY_SPACE);
 end;
 
+{ a key and what it does, in the left panel }
+procedure	gameKey(y: longint; key, text: string);
+begin
+	lores_text(1, y, key, 15);
+	lores_text(1 + length(key) * 4, y, ' ' + text, 7);
+end;
+
+{ the play screen in the 160 x 100 mode, with the board as loBoard draws it }
+procedure	gameScreen;
+const	LOGO_C	: array[1..4] of byte = (12, 14, 10, 11);
+var	i	: longint;
+begin
+	lores_text_big(1, 3, '2', LOGO_C[1], 2, 2);
+	for i := 2 to 4 do lores_text_big(1 + (i-1)*8, 3, copy('2048', i, 1), LOGO_C[i], 2, 2);
+	gameKey(20, 'WASD', '');
+	lores_text(1, 27, 'SLIDE', 7);
+	gameKey(38, 'R', 'NEW');
+	gameKey(46, 'H', 'BEST');
+	gameKey(54, 'M', 'SOUND');
+	gameKey(62, '?', 'HELP');
+	gameKey(70, '!', 'INFO');
+	gameKey(78, 'ESC', 'QUIT');
+	if GAME_CONFIG.sound then
+		lores_text(1, 90, 'SND ON', 10)
+	else	lores_text(1, 90, 'SND OFF', 8);
+
+	lores_text(128, 5, 'SCORE', 13);
+	lores_text(128, 13, ltoa(GAME_SCORE), 15);
+	lores_text(128, 27, 'BEST', 12);
+	lores_text(128, 35, ltoa(GAME_HISCORE), 15);
+	lores_text(128, 49, 'MOVES', 14);
+	lores_text(128, 57, ltoa(GAME_MOVES), 15);
+	lores_text(128, 71, 'GOAL', 8);
+	lores_text(128, 79, ltoa(longint(1) shl GAME_WINCOND), 7);
+end;
+
+{ the whole screen, board as it is }
+procedure	gameShow;
+var	big	: BIG_TYPE;
+begin
+	fillchar(big, sizeof(big), FALSE);
+	lores_clear(0);
+	gameScreen;
+	loBoard(board, big, -1, -1, 0);
+	lores_flip;
+end;
+
+{ after a slide: the merged tiles pop, then the new tile grows }
+procedure	gameSettle(const anim: ANIM_TYPE);
+var	big	: BIG_TYPE;
+	before	: BOARD_TYPE;
+	k, n,
+	x, y,
+	nx, ny	: longint;
+begin
+	fillchar(big, sizeof(big), FALSE);
+	for k := 0 to anim.count-1 do
+	begin
+		n := 0;
+		for x := 0 to anim.count-1 do
+			if (anim.tiles[x].tx = anim.tiles[k].tx) and (anim.tiles[x].ty = anim.tiles[k].ty) then inc(n);
+		if n > 1 then big[anim.tiles[k].tx, anim.tiles[k].ty] := TRUE;
+	end;
+	lores_clear(0);
+	gameScreen;
+	loBoard(board, big, -1, -1, 0);
+	lores_flip;
+	sleep(50);
+
+	before := board;
+	boardPlace(board);
+	nx := -1;
+	ny := -1;
+	for y := 0 to BOARD_DIM-1 do
+	for x := 0 to BOARD_DIM-1 do
+		if board[x, y] <> before[x, y] then
+		begin
+			nx := x;
+			ny := y;
+		end;
+	fillchar(big, sizeof(big), FALSE);
+	for k := 1 to 3 do
+	begin
+		loBoard(board, big, nx, ny, k * 6);
+		lores_flip;
+		sleep(FRAME_TIME);
+	end;
+	gameShow;
+end;
+
 { a score good enough goes in the table of the best scores }
 procedure	gameRecord;
 var	i, j, best	: longint;
@@ -165,9 +255,11 @@ begin
 	for j := 0 to BOARD_DIM - 1 do
 		for i := 0 to BOARD_DIM - 1 do
 			if board[j][i] > best then best := board[j][i];
+	lores_suspend;
+	ANSI_draw(BACKGD_IMG);
 	hiscoreEnter(GAME_SCORES, GAME_SCORE, 'BEST TILE ' + ltoa(longint(1) shl best), 'NEW HIGH SCORE', SHADE_RED);
 	scoreSave;
-	gameLogo;
+	lores_resume;
 end;
 
 procedure       gamePlay;
@@ -178,51 +270,57 @@ var	c       : char;
 	score,
 	k	: longint;
 begin
+	if not lores_init then
+	begin
+		info(SHADE_RED, 'THE GAME NEEDS AN EGA OR VGA CARD.');
+		exit;
+	end;
 	quit := FALSE; next := FALSE;
 	anim.count := 0;
-	gameLogo;
-	if stateLoad(board) then
-	begin
-		gameUpdate;
-	end
-	else	stateRestart(board);
+	if not stateLoad(board) then stateRestart(board);
 	repeat
-		gameUpdate;
+		gameShow;
 		{ one key at a time: repeats piled up during a slide are dropped }
 		repeat
 			k := getkey_single;
-			c := chr(k and $FF);
-		until (k < 256) and (c in ['W','A','S','D','R','H','M',#27,'?','!']);
-		gameUpdate;
+			case k of
+			KEY_UP:		c := 'W';
+			KEY_DOWN:	c := 'S';
+			KEY_LEFT:	c := 'A';
+			KEY_RIGHT:	c := 'D';
+			else		c := upcase(chr(k and $FF));
+			end;
+		until (k < 256) and (c in ['W','A','S','D','R','H','M',#27,'?','!']) or
+		      (k = KEY_UP) or (k = KEY_DOWN) or (k = KEY_LEFT) or (k = KEY_RIGHT);
 		next := FALSE;
 		score := GAME_SCORE;
 		case c of
-		#27:	begin
-				if query(SHADE_RED, '~0CQUIT AND SAVE GAME (~0FY~0C/~0FN~0C) ?') then
-					quit := TRUE;
-				next := FALSE;
-			end;
-		'R':	if query(SHADE_CYAN, '~03START A NEW GAME (~0FY~03/~0FN~03) ?') then
+		#27:	quit := lores_ask('QUIT AND SAVE THE GAME? Y/N', 'YN'#27) = 'Y';
+		'R':	if lores_ask('START A NEW GAME? Y/N', 'YN'#27) = 'Y' then
 			begin
 				gameRecord;
 				stateRestart(board);
 				scoreSave;
-				next := FALSE;
 			end;
 		'A':	next := boardMove(board, DIR_LEFT , anim);
 		'D':	next := boardMove(board, DIR_RIGHT, anim);
 		'W':	next := boardMove(board, DIR_UP   , anim);
 		'S':	next := boardMove(board, DIR_DOWN , anim);
-                '?':    begin
-                		gameHelp;
-                                next := FALSE;
-                	end;
-                '!':    gameAbout;
-		'H':	hiscoreView(GAME_SCORES, 'HIGH SCORES', SHADE_RED, 0);
+		'?',
+		'!',
+		'H':	begin
+				lores_suspend;
+				ANSI_draw(BACKGD_IMG);
+				case c of
+				'?':	gameHelp;
+				'!':	gameAbout;
+				'H':	hiscoreView(GAME_SCORES, 'HIGH SCORES', SHADE_RED, 0);
+				end;
+				lores_resume;
+			end;
 		'M':	begin
 				GAME_CONFIG.sound := not GAME_CONFIG.sound;
 				SND_ENABLED := GAME_CONFIG.sound;
-				gameSoundKey;
 				snd_play(SFX_BLIP);
 			end;
 		end;
@@ -231,27 +329,25 @@ begin
 			if GAME_SCORE > score then snd_play(SFX_BLIP) else snd_play(SFX_CLICK);
 			boardAnimate(anim);
 			inc(GAME_MOVES);
-			boardPlace(board);
-			boardShow(board);
+			gameSettle(anim);
 			if stateCheckWin(board) then
 			begin
 				snd_play(SFX_WIN);
-				info(SHADE_GREEN, '~02!! ~0AYOU WIN ~02!!');
+				lores_ask('YOU MADE ' + ltoa(longint(1) shl GAME_WINCOND) + '! YOU WIN!', #13#27' ');
 				gameRecord;
 				stateRestart(board);
-				next := FALSE;
 			end
 			else
 			if stateCheckOver(board) then
 			begin
 				snd_play(SFX_DIE);
-				info(SHADE_YELLOW, '~06!! ~0EGAME OVER~06 !!');
+				lores_ask('GAME OVER', #13#27' ');
 				gameRecord;
 				stateRestart(board);
-				next := FALSE;
 			end;
 		end;
 	until quit;
+	lores_done;
 	scoreSave;
 	stateSave(board);
 end;

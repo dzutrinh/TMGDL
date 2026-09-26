@@ -16,13 +16,24 @@ const   BOARD_DIM	= 4;
 	BOARD_X		= (SCR_WIDTH-BOARD_DIM * BOARD_W) shr 1 + 1;
 	BOARD_Y 	= 11;
 	BOARD_FILLER	= #32#32#32#32#32#32;
-	ANIM_FRAMES	= 8;		{ frames per slide, one per retrace }
+	ANIM_FRAMES	= 6;		{ frames per slide                  }
+	FRAME_TIME	= 14;		{ ms a frame of the slide           }
+
+	{ the board in the 160 x 100 mode }
+	LX		= 35;		{ top left pixel of its frame       }
+	LY		= 5;
+	TILE		= 20;		{ a tile, in pixels                 }
+	GAP		= 2;		{ between two tiles                 }
+	PITCH		= TILE + GAP;
+	FRAME_C		= 8;
+	EMPTY_C		= 0;
 
 type    TILE_TYPE	= longint;
 	VEC4_TYPE    	= array[0..BOARD_DIM-1] of TILE_TYPE;
 	BOARD_TYPE	= array[0..BOARD_DIM-1] of VEC4_TYPE;
 
 	DIR_TYPE	= (DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT);
+	BIG_TYPE	= array[0..BOARD_DIM-1, 0..BOARD_DIM-1] of boolean;
 
 	{ a tile's path during one slide, in board cells }
 	ANIM_TILE	= record
@@ -48,6 +59,11 @@ const   GAME_WINCOND	: longint = 11;
 			($80, $70,
 			 $10, $20, $30, $40, $50, $90, $A0,
 			 $B0, $C0, $D0, $E0, $F0, $F0, $F0, $F0);
+	{ the tiles of 2, 4, 8 ... in the 160 x 100 mode }
+	TILE_BG		: array[1..17] of byte =
+			(7, 15, 6, 12, 4, 5, 14, 10, 2, 11, 9, 1, 3, 13, 8, 8, 8);
+	TILE_FG		: array[1..17] of byte =
+			(0, 0, 15, 15, 15, 15, 0, 0, 15, 0, 15, 14, 15, 15, 15, 15, 15);
 
 { ////////////////////////////////////////////////////////////////////////// }
 

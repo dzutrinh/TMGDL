@@ -442,6 +442,7 @@ procedure	lores_set  (x, y: integer; color: byte);
 function	lores_get  (x, y: integer): byte;
 procedure	lores_bar  (x, y, w, h: integer; color: byte);
 procedure	lores_text (x, y: integer; s: string; color: byte);	{ 3 x 5 font }
+procedure	lores_text_big(x, y: integer; s: string; color, sx, sy: byte);	{ scaled }
 function	lores_text_width(const s: string): integer;
 procedure	lores_flip;
 procedure	lores_line (x0, y0, x1, y1: integer; color: byte);
@@ -1967,6 +1968,12 @@ begin
 end;
 
 procedure	lores_text(x, y: integer; s: string; color: byte);
+begin
+	lores_text_big(x, y, s, color, 1, 1);
+end;
+
+{ the 3 x 5 font, each pixel sx wide and sy high }
+procedure	lores_text_big(x, y: integer; s: string; color, sx, sy: byte);
 var	i, r, c	: integer;
 	ch	: byte;
 	bits	: word;
@@ -1979,9 +1986,10 @@ begin
 			bits := LORES_FONT[ch];
 			for r := 0 to 4 do
 				for c := 0 to 2 do
-					if bits and (1 shl (r * 3 + c)) <> 0 then lores_set(x + c, y + r, color);
+					if bits and (1 shl (r * 3 + c)) <> 0 then
+						lores_bar(x + c * sx, y + r * sy, sx, sy, color);
 		end;
-		inc(x, 4);
+		inc(x, 4 * sx);
 	end;
 end;
 

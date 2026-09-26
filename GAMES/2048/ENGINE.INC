@@ -15,6 +15,10 @@ procedure	boardLineCell(dir: DIR_TYPE; l, p: longint; var x, y: longint);	forwar
 function	boardMove(var board: BOARD_TYPE; dir: DIR_TYPE;
 			  var anim: ANIM_TYPE): boolean;			forward;
 procedure	boardAnimate(const anim: ANIM_TYPE);				forward;
+procedure	loRound(x, y, w, h: longint; c: byte);				forward;
+procedure	loBack;							forward;
+procedure	loTile(px, py, v, d: longint);					forward;
+procedure	loBoard(const board: BOARD_TYPE; const big: BIG_TYPE; nx, ny, grow: longint);	forward;
 function        boardCheckPair(board: BOARD_TYPE): boolean;			forward;
 function        boardCountBlank(board: BOARD_TYPE): longint;			forward;
 function        boardPlace(var board: BOARD_TYPE): boolean;			forward;
@@ -200,40 +204,81 @@ begin
 	boardMove := ok;
 end;
 
-{ Plays a slide: every tile glides from its old cell to its new one. Frames }
-{ are composed off-screen and copied on the vertical retrace (no flicker)   }
+{ Plays a slide: every tile glides from its old cell to its new one }
 procedure	boardAnimate(const anim: ANIM_TYPE);
-var	scr,
-	old	: SCREEN;
-	f, k,
-	x, y,
-	i, j	: longint;
+var	f, k,
+	px, py	: longint;
 	moving	: boolean;
 begin
-	scr := vscreen_alloc;
-	if scr = nil then exit;			{ no memory: skip the animation }
-	vscreen_grab(scr);
-	old := vscreen_activate(scr);
 	for f := 1 to ANIM_FRAMES do
 	begin
-		for y := 0 to BOARD_DIM-1 do
-		for x := 0 to BOARD_DIM-1 do
-			emptyDraw(x, y);
+		loBack;
 		{ resting tiles first, so moving ones slide over them }
 		for moving := FALSE to TRUE do
 		for k := 0 to anim.count-1 do
 		with anim.tiles[k] do
 		if ((fx <> tx) or (fy <> ty)) = moving then
 		begin
-			i := BOARD_X + (fx*BOARD_W + (tx-fx)*BOARD_W*f div ANIM_FRAMES);
-			j := BOARD_Y + (fy*BOARD_H + (ty-fy)*BOARD_H*f div ANIM_FRAMES);
-			tileDraw(i, j, value);
+			px := LX + GAP + fx*PITCH + (tx-fx)*PITCH*f div ANIM_FRAMES;
+			py := LY + GAP + fy*PITCH + (ty-fy)*PITCH*f div ANIM_FRAMES;
+			loTile(px, py, value, 0);
 		end;
-		if ltx_mono then sleep(14) else vsync;
-		vscreen_flip(scr);
+		lores_flip;
+		sleep(FRAME_TIME);
 	end;
-	vscreen_activate(old);
-	vscreen_free(scr);
+end;
+
+{ a bar with its corners cut off: a rounded tile }
+procedure	loRound(x, y, w, h: longint; c: byte);
+begin
+	lores_bar(x, y, w, h, c);
+	lores_set(x, y, FRAME_C);
+	lores_set(x + w - 1, y, FRAME_C);
+	lores_set(x, y + h - 1, FRAME_C);
+	lores_set(x + w - 1, y + h - 1, FRAME_C);
+end;
+
+{ the frame of the board and its empty cells }
+procedure	loBack;
+var	x, y	: longint;
+begin
+	lores_bar(LX, LY, BOARD_DIM*PITCH + GAP, BOARD_DIM*PITCH + GAP, FRAME_C);
+	for y := 0 to BOARD_DIM-1 do
+	for x := 0 to BOARD_DIM-1 do
+		loRound(LX + GAP + x*PITCH, LY + GAP + y*PITCH, TILE, TILE, EMPTY_C);
+end;
+
+{ a tile of value 2^v at pixel (px, py), d pixels bigger on every side; }
+{ numbers of one or two digits are twice as wide                        }
+procedure	loTile(px, py, v, d: longint);
+var	s	: string[8];
+	sx, w	: longint;
+begin
+	if v > 17 then v := 17;
+	loRound(px - d, py - d, TILE + 2*d, TILE + 2*d, TILE_BG[v]);
+	s := ltoa(longint(1) shl v);
+	if length(s) <= 2 then sx := 2 else sx := 1;
+	w := (length(s)*4 - 1) * sx;
+	lores_text_big(px + (TILE - w + 1) div 2, py + 5, s, TILE_FG[v], sx, 2);
+end;
+
+{ the board; the tiles in big are drawn a pixel bigger, and the one at }
+{ (nx, ny) as a square of size grow growing out of its cell           }
+procedure	loBoard(const board: BOARD_TYPE; const big: BIG_TYPE; nx, ny, grow: longint);
+var	x, y,
+	px, py	: longint;
+begin
+	loBack;
+	for y := 0 to BOARD_DIM-1 do
+	for x := 0 to BOARD_DIM-1 do
+	if board[x, y] <> 0 then
+	begin
+		px := LX + GAP + x*PITCH;
+		py := LY + GAP + y*PITCH;
+		if (x = nx) and (y = ny) then
+			loRound(px + (TILE - grow) div 2, py + (TILE - grow) div 2, grow, grow, TILE_BG[board[x, y]])
+		else	loTile(px, py, board[x, y], ord(big[x, y]));
+	end;
 end;
 
 { Checks for mergeable pair }
@@ -342,7 +387,6 @@ begin
 	stateInit(board);
 	boardPlace(board);
 	boardPlace(board);
-	boardShow(board);
 end;
 
 { Saves current game state to the save game file, returns TRUE if succeed }
