@@ -232,6 +232,8 @@ The games ship as source only: run `BUILD` in their folders.
 
 ### 2048
 
+The game is now updated on Itch.io (https://trinhnguyen.itch.io/2048)
+
 Slide the tiles of a 4 x 4 board; two equal tiles that meet merge into one of double value. Reach the 2048 tile before the board fills up. The board is drawn in the 160 x 100 mode: colored tiles slide a pixel at a time, merged tiles pop and new ones grow; the game is saved on exit and resumed next time, and the eight best scores are kept.
 
 Keys: `W` `A` `S` `D` or arrows slide, `R` new game, `H` high scores, `M` sound on/off, `?` help, `!` about, `ESC` quit.
